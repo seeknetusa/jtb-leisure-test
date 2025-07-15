@@ -1,4 +1,14 @@
 export default async function handler(req, res) {
+  // CORS 対応（Webflow など他のドメインからのアクセス許可）
+  res.setHeader('Access-Control-Allow-Origin', '*'); // ← 必要！
+  res.setHeader('Access-Control-Allow-Methods', 'GET');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // プリフライトリクエスト対策（OPTIONSリクエストへの応答）
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   const token = process.env.AIRTABLE_TOKEN;
   const baseId = process.env.AIRTABLE_BASE_ID;
   const tableName = process.env.AIRTABLE_TABLE_NAME;
