@@ -395,7 +395,7 @@ async function displayCurrentPage() {
 
     card.querySelector('.tour-title').textContent = title;
     card.querySelector('.tour-style').textContent = style;
-    card.querySelector('.tour-dates').textContent = `${tour_start_date} - ${tour_end_date}`;
+    card.querySelector('.tour-dates').textContent = `${formatDateVerbose(tour_start_date)} - ${formatDateVerbose(tour_end_date)}`;
     card.querySelector('.tour-length').textContent = `${days} DAYS ${nights} NIGHTS`;
     card.querySelector('.tour-price').textContent = `from ${inquiryText} per person`;
 
