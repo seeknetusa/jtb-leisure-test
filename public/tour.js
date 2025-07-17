@@ -1,13 +1,22 @@
 const apiBaseUrl = "https://jtb-leisure-test.vercel.app/api/airtable-proxy";
- const pageSize = 3;
- let currentPage = 1;
- let totalPages = 0;
- let currentSortField = 'Name';
- let currentSortDirection = 'asc';
- let allData = [];
- let filteredData = [];
- const urlParams = new URLSearchParams(window.location.search);
-const urlType = urlParams.get("style");  // 例: "japan_day_tours"
+const pageSize = 3;
+let currentPage = 1;
+let totalPages = 0;
+let currentSortField = 'Name';
+let currentSortDirection = 'asc';
+let allData = [];
+let filteredData = [];
+
+//const urlParams = new URLSearchParams(window.location.search);
+//const urlType = urlParams.get("style");  // 例: "japan_day_tours"
+const pathParts = window.location.pathname.split('/').filter(Boolean);
+let urlType = pathParts[pathParts.length - 1];  // 最後の部分だけ抽出（例: "tailor-made-tours"）
+if(urlType == 'japan-tours' || urlType == 'airtable5.html') urlType = '';
+
+//console.log('pathParts', pathParts[pathParts.length - 1]);
+//console.log('urlType', urlType);
+//urlType = 'tailor-made-tours';
+
 let minDays = 1;
 let maxDays = 30; 
 let urlTypeCheckedSet = false; // グローバルに一度だけ適用するためのフラグ
@@ -59,18 +68,26 @@ async function fetchAndStoreData(withUI = true) {
       let typApplied = false;
 
       // URLパラメータ style に一致するチェックボックスをONにする
-      if (urlType && !typApplied) {
-        document.querySelectorAll('input[name="style"]').forEach(input => {
-          const label = input.value.replace(/^\d+\.\s*/, '').toLowerCase().replace(/\s+/g, '_');
-          if (label === urlType) {
-            input.checked = true;
-            typApplied = true;
-          }
-        });
-      } else {
-        // styleが指定されていない場合、すぐに表示
-        paginateAndDisplay();
-      }
+		if (urlType && !typApplied) {
+		  document.querySelectorAll('input[name="style"]').forEach(input => {
+		    // 入力値から数字とピリオドを除去、英数字以外を除去して正規化
+		    const normalizedLabel = input.value
+		      .replace(/^\d+\.\s*/, '')       // 例: "2. Tailor-made Tours" → "Tailor-made Tours"
+		      .toLowerCase()
+		      .replace(/[^a-z0-9]/g, '');     // 英数字以外を除去（記号、スペース、ハイフンなど）
+
+		    const normalizedUrlType = urlType
+		      .toLowerCase()
+		      .replace(/[^a-z0-9]/g, '');     // 同じく英数字以外を除去
+
+		    if (normalizedLabel === normalizedUrlType) {
+		      input.checked = true;
+		      typApplied = true;
+		    }
+		  });
+		} else {
+		  paginateAndDisplay();
+		}
 
       // styleが指定されていた場合、初回フィルター適用
       if (typApplied) {
