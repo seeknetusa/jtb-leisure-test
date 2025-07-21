@@ -62,39 +62,29 @@ async function fetchAndStoreData(withUI = true) {
 
     // UI更新が必要な場合
     if (withUI) {
-      generateFilters();          // フィルターボックスを描画
-      generateSearchDropdowns(); // 検索ドロップダウンの選択肢を描画
+      generateFilters();          
+      //generateSearchDropdowns(); 
 
       let typApplied = false;
 
-      // URLパラメータ style に一致するチェックボックスをONにする
-		if (urlType && !typApplied) {
-		  document.querySelectorAll('input[name="style"]').forEach(input => {
-		    // 入力値から数字とピリオドを除去、英数字以外を除去して正規化
-		    const normalizedLabel = input.value
-		      .replace(/^\d+\.\s*/, '')       // 例: "2. Tailor-made Tours" → "Tailor-made Tours"
-		      .toLowerCase()
-		      .replace(/[^a-z0-9]/g, '');     // 英数字以外を除去（記号、スペース、ハイフンなど）
+      if (urlType && !typApplied) {
+        document.querySelectorAll('input[name="style"]').forEach(input => {
+          const normalizedLabel = input.value.replace(/^\d+\.\s*/, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          const normalizedUrlType = urlType.toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (normalizedLabel === normalizedUrlType) {
+            input.checked = true;
+            typApplied = true;
+          }
+        });
+      }
 
-		    const normalizedUrlType = urlType
-		      .toLowerCase()
-		      .replace(/[^a-z0-9]/g, '');     // 同じく英数字以外を除去
-
-		    if (normalizedLabel === normalizedUrlType) {
-		      input.checked = true;
-		      typApplied = true;
-		    }
-		  });
-		} else {
-		  paginateAndDisplay();
-		}
-
-      // styleが指定されていた場合、初回フィルター適用
+      // ✅ フィルターが適用されたかに関係なく描画処理は必ず行う
       if (typApplied) {
-        applyFilter();
+        applyFilter(); // チェックボックスがONになっていればフィルターを適用
+      } else {
+        paginateAndDisplay(); // そうでなければ全件表示
       }
     }
-
   } catch (e) {
     console.error(e);
     alert("データ取得に失敗しました");
@@ -215,31 +205,7 @@ function generateFilters() {
   });
 
   // 検索バーのドロップダウンを更新
-  const styleSelect = document.getElementById('search-style');
-  const destinationSelect = document.getElementById('search-destination');
-  const currentSelectedStyle = styleSelect.value;
-  const currentSelectedDestination = destinationSelect.value;
-  styleSelect.innerHTML = '<option value="">-- Select --</option>';
-  destinationSelect.innerHTML = '<option value="">-- Select --</option>';
 
-  sortedStyles.forEach(c => {
-    const value = c.trim();
-    const label = value.replace(/^\d+\.\s*/, '');
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = label;
-    if (value === currentSelectedStyle) option.selected = true;
-    styleSelect.appendChild(option);
-  });
-
-  sortedDestinations.forEach(c => {
-    const label = c.trim().replace(/^\d+\.\s*/, '');
-    const option = document.createElement('option');
-    option.value = label;
-    option.textContent = label;
-    if (label === currentSelectedDestination) option.selected = true;
-    destinationSelect.appendChild(option);
-  });
 
   // Trip Length（日数）用スライダーの設定
   const dayValues = allData
@@ -374,6 +340,8 @@ async function displayCurrentPage() {
   const pageItems = filteredData.slice(start, end); // 現在ページに表示するアイテム抽出
 
   for (const record of pageItems) {
+  	console.log(' record', record);
+  	  
     const title = record.fields.Name || '無題';
     const style = record.fields.Style || '';
     const interest = record.fields.Interest || '';
@@ -390,7 +358,13 @@ async function displayCurrentPage() {
       ? raw
       : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(numeric);
 
+	const priceTextArray = record.fields["Price Text (from Inquiry)"];
+    const price_text = Array.isArray(priceTextArray) && priceTextArray.length > 0 ? priceTextArray[0] : '';
+    
     // 開始・終了日
+    const dateArray = record.fields["Tour Date Text (from Inquiry)"];
+    const tour_date_text = Array.isArray(dateArray) && dateArray.length > 0 ? dateArray[0] : '';
+    
     const startArray = record.fields["Tour Start Date (from Inquiry)"];
     const tour_start_date = Array.isArray(startArray) && startArray.length > 0 ? startArray[0] : '';
 
@@ -403,18 +377,39 @@ async function displayCurrentPage() {
     if (Array.isArray(images) && images.length > 0) {
       imageUrl = images[0].thumbnails?.large?.url || images[0].url;
     }
+    
+    // Tour Logo URL取得
+    const tour_logo_image = record.fields["Tour Logo"] || [];
+    let tourLogoUrl = '';
+    if (Array.isArray(tour_logo_image) && tour_logo_image.length > 0) {
+      tourLogoUrl = tour_logo_image[0].thumbnails?.large?.url || tour_logo_image[0].url;
+    }
 
     // テンプレート複製とデータのバインド
     const cardTemplate = document.getElementById('tour-card-template');
     const card = cardTemplate.content.cloneNode(true);
+    
     if (imageUrl) card.querySelector('.tour-image').src = imageUrl;
     else card.querySelector('.tour-image').remove();
-
+    
+    if (tourLogoUrl) card.querySelector('.tour-logo').src = tourLogoUrl;
+    else card.querySelector('.tour-logo').remove();
+    
     card.querySelector('.tour-title').textContent = title;
     card.querySelector('.tour-style').textContent = style;
-    card.querySelector('.tour-dates').textContent = `${formatDateVerbose(tour_start_date)} - ${formatDateVerbose(tour_end_date)}`;
+    if(tour_date_text != ''){
+     	card.querySelector('.tour-dates').textContent = tour_date_text;
+	}else{
+ 		card.querySelector('.tour-dates').textContent = `${formatDateVerbose(tour_start_date)} - ${formatDateVerbose(tour_end_date)}`;
+	}
+    //card.querySelector('.tour-dates').textContent = `${formatDateVerbose(tour_start_date)} - ${formatDateVerbose(tour_end_date)}`;
     card.querySelector('.tour-length').textContent = `${days} DAYS ${nights} NIGHTS`;
-    card.querySelector('.tour-price').textContent = `from ${inquiryText} per person`;
+    
+    if(price_text != ''){
+    	card.querySelector('.tour-price').textContent = price_text;
+    }else{
+ 		card.querySelector('.tour-price').textContent = `from ${inquiryText} per person`;
+	}
 
     list.appendChild(card);
   }
@@ -647,47 +642,16 @@ function generateSearchDropdowns() {
 // 検索ボタンのクリックイベント
 document.getElementById('search-button').addEventListener('click', () => {
   // 検索条件の取得
-  const selectedStyle = document.getElementById('search-style').value;
-  const selectedDestination = document.getElementById('search-destination').value;
-  const selectedDays = document.getElementById('search-days').value;
   const keyword = document.getElementById('search-keyword').value.trim().toLowerCase();
-
-  // チェックボックス状態をドロップダウンに合わせて更新（チェック済みも保持）
-  document.querySelectorAll('input[name="style"]').forEach(input => {
-    input.checked = (input.value === selectedStyle || input.checked);
-  });
-  document.querySelectorAll('input[name="destination"]').forEach(input => {
-    input.checked = (input.value === selectedDestination || input.checked);
-  });
 
   // データのフィルタリング
   filteredData = allData.filter(record => {
     const name = (record.fields.Name || '').toLowerCase();
-    const styleField = record.fields.Style || '';
-    const destinationField = record.fields.Destination || '';
-    const days = record.fields.Days;
-
-    // Style フィルタ
-    const styleMatch = !selectedStyle || (
-      Array.isArray(styleField)
-        ? styleField.includes(selectedStyle)
-        : styleField === selectedStyle
-    );
-
-    // Days フィルタ（数値比較）
-    const daysMatch = !selectedDays || days === parseInt(selectedDays);
-
-    // Destination フィルタ
-    const destinationMatch = !selectedDestination || (
-      Array.isArray(destinationField)
-        ? destinationField.includes(selectedDestination)
-        : destinationField === selectedDestination
-    );
-
+	
     // キーワード検索（Nameフィールド）
     const keywordMatch = !keyword || name.includes(keyword);
 
-    return styleMatch && destinationMatch && keywordMatch && daysMatch;
+    return keywordMatch;
   });
 
   // ページ番号を初期化し、再描画
@@ -753,9 +717,6 @@ document.getElementById('clear-filters').addEventListener('click', () => {
   }
 
   // ✅ 検索フォームも初期化
-  document.getElementById('search-style').value = '';
-  document.getElementById('search-destination').value = '';
-  document.getElementById('search-days').value = '';
   document.getElementById('search-keyword').value = '';
   
   // ✅ フィルターを再適用
