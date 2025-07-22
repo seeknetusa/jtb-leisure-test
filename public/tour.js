@@ -330,87 +330,17 @@ function paginateAndDisplay() {
 // 現在のページに表示すべきTourレコードを描画する関数
 async function displayCurrentPage() {
   const container = document.getElementById('airtable-data');
-  container.innerHTML = ''; // 表示リストを初期化
+  container.innerHTML = '';
 
-  const listTemplate = document.getElementById('airtable-list-template');
-  const list = listTemplate.content.cloneNode(true).querySelector('ul');
+  const list = document.createElement('ul');
+  list.className = 'airtable-list'; // ← ✅ これを追加
 
   const start = (currentPage - 1) * pageSize;
   const end = start + pageSize;
-  const pageItems = filteredData.slice(start, end); // 現在ページに表示するアイテム抽出
+  const pageItems = filteredData.slice(start, end);
 
   for (const record of pageItems) {
-  	console.log(' record', record);
-  	  
-    const title = record.fields.Name || '無題';
-    const style = record.fields.Style || '';
-    const interest = record.fields.Interest || '';
-    const destination = record.fields.Destination || '';
-    const days = record.fields.Days || '';
-    const nights = record.fields.Nights || '';
-    const inquiryIds = record.fields.Inquiry || [];
-
-    // 金額の整形
-    const priceArray = record.fields["Price (Adult) (from Inquiry)"];
-    const raw = Array.isArray(priceArray) && priceArray.length > 0 ? priceArray[0] : '';
-    const numeric = parseFloat(raw.toString().replace(/[^\d.]/g, ''));
-    const inquiryText = isNaN(numeric)
-      ? raw
-      : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(numeric);
-
-	const priceTextArray = record.fields["Price Text (from Inquiry)"];
-    const price_text = Array.isArray(priceTextArray) && priceTextArray.length > 0 ? priceTextArray[0] : '';
-    
-    // 開始・終了日
-    const dateArray = record.fields["Tour Date Text (from Inquiry)"];
-    const tour_date_text = Array.isArray(dateArray) && dateArray.length > 0 ? dateArray[0] : '';
-    
-    const startArray = record.fields["Tour Start Date (from Inquiry)"];
-    const tour_start_date = Array.isArray(startArray) && startArray.length > 0 ? startArray[0] : '';
-
-    const endArray = record.fields["Tour End Date (from Inquiry)"];
-    const tour_end_date = Array.isArray(endArray) && endArray.length > 0 ? endArray[0] : '';
-
-    // 画像URL取得
-    const images = record.fields.Images || [];
-    let imageUrl = '';
-    if (Array.isArray(images) && images.length > 0) {
-      imageUrl = images[0].thumbnails?.large?.url || images[0].url;
-    }
-    
-    // Tour Logo URL取得
-    const tour_logo_image = record.fields["Tour Logo"] || [];
-    let tourLogoUrl = '';
-    if (Array.isArray(tour_logo_image) && tour_logo_image.length > 0) {
-      tourLogoUrl = tour_logo_image[0].thumbnails?.large?.url || tour_logo_image[0].url;
-    }
-
-    // テンプレート複製とデータのバインド
-    const cardTemplate = document.getElementById('tour-card-template');
-    const card = cardTemplate.content.cloneNode(true);
-    
-    if (imageUrl) card.querySelector('.tour-image').src = imageUrl;
-    else card.querySelector('.tour-image').remove();
-    
-    if (tourLogoUrl) card.querySelector('.tour-logo').src = tourLogoUrl;
-    else card.querySelector('.tour-logo').remove();
-    
-    card.querySelector('.tour-title').textContent = title;
-    card.querySelector('.tour-style').textContent = style;
-    if(tour_date_text != ''){
-     	card.querySelector('.tour-dates').textContent = tour_date_text;
-	}else{
- 		card.querySelector('.tour-dates').textContent = `${formatDateVerbose(tour_start_date)} - ${formatDateVerbose(tour_end_date)}`;
-	}
-    //card.querySelector('.tour-dates').textContent = `${formatDateVerbose(tour_start_date)} - ${formatDateVerbose(tour_end_date)}`;
-    card.querySelector('.tour-length').textContent = `${days} DAYS ${nights} NIGHTS`;
-    
-    if(price_text != ''){
-    	card.querySelector('.tour-price').textContent = price_text;
-    }else{
- 		card.querySelector('.tour-price').textContent = `from ${inquiryText} per person`;
-	}
-
+    const card = createTourCardElement(record);
     list.appendChild(card);
   }
 
@@ -723,4 +653,112 @@ document.getElementById('clear-filters').addEventListener('click', () => {
   applyFilter();
 });
 
-fetchAndStoreData();
+
+
+
+
+
+
+function createTourCardElement(record) {
+  const f = record.fields;
+  const template = document.getElementById('tour-card-template');
+  const clone = template.content.cloneNode(true);
+
+  // 画像
+  const images = f.Images || [];
+  const imageUrl = (Array.isArray(images) && images.length > 0)
+    ? images[0].thumbnails?.full?.url || images[0].url
+    : '';
+  const imageEl = clone.querySelector('.tour-image');
+  if (imageUrl && imageEl) imageEl.src = imageUrl;
+  else if (imageEl) imageEl.remove();
+
+  // ロゴ
+  const tourLogos = f["Tour Logo"] || [];
+  const logoUrl = (Array.isArray(tourLogos) && tourLogos.length > 0)
+    ? tourLogos[0].thumbnails?.full?.url || tourLogos[0].url
+    : '';
+  const logoEl = clone.querySelector('.tour-logo');
+  if (logoUrl && logoEl) logoEl.src = logoUrl;
+  else if (logoEl) logoEl.remove();
+
+  clone.querySelector('.tour-title').textContent = f.Name || '';
+  clone.querySelector('.tour-style').textContent = f.Style || '';
+
+  const startDate = f["Tour Start Date (from Inquiry)"]?.[0] || f["Start Date"];
+  const endDate = f["Tour End Date (from Inquiry)"]?.[0] || f["End Date"];
+  const dateText = f["Tour Date Text (from Inquiry)"]?.[0] || '';
+  const dateEl = clone.querySelector('.tour-dates');
+  if (dateText) {
+    dateEl.textContent = dateText;
+  } else {
+    dateEl.textContent = `${formatDateVerbose(startDate)} - ${formatDateVerbose(endDate)}`;
+  }
+
+  clone.querySelector('.tour-length').textContent = `${f.Days || ''} DAYS ${f.Nights || ''} NIGHTS`;
+
+  const priceText = f["Price Text (from Inquiry)"]?.[0] || '';
+  const priceArray = f["Price (Adult) (from Inquiry)"];
+  const raw = Array.isArray(priceArray) && priceArray.length > 0 ? priceArray[0] : '';
+  const numeric = parseFloat(raw.toString().replace(/[^\d.]/g, ''));
+  const priceFormatted = isNaN(numeric)
+    ? raw
+    : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(numeric);
+  const priceEl = clone.querySelector('.tour-price');
+  priceEl.textContent = priceText || `from ${priceFormatted} per person`;
+
+  const linkEl = clone.querySelector('a.btn');
+  if (linkEl) linkEl.href = f.URL || '#';
+
+  return clone;
+}
+
+async function fetchRecommendedTours(containerId) {
+  let all = [];
+  let offset = null;
+  let done = false;
+
+  try {
+    // Airtableから全データをページネーション付きで取得
+    while (!done) {
+      let url = `${apiBaseUrl}?sortField=${encodeURIComponent(currentSortField)}&sortDirection=${encodeURIComponent(currentSortDirection)}`;
+      if (offset) url += `&offset=${offset}`;
+
+      const res = await fetch(url);
+      if (!res.ok) {
+        const err = await res.text();
+        console.error(`API error: ${res.status}\n${err}`);
+        return;
+      }
+
+      const data = await res.json();
+      if (!data.records) {
+        console.error("Invalid format received from Airtable");
+        return;
+      }
+
+      all.push(...data.records);
+      offset = data.offset;
+      done = !offset;
+    }
+
+    // カルーセルにツアーカードを描画
+    renderRecommendedCarousel(all, containerId);
+
+  } catch (e) {
+    console.error("Failed to fetch data:", e);
+  }
+}
+
+function renderRecommendedCarousel(tours, containerId) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+
+  tours.forEach(record => {
+    const card = createTourCardElement(record); // ← 共通テンプレ使ってる
+    container.appendChild(card);
+  });
+}
+
+
+
