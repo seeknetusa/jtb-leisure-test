@@ -26,8 +26,10 @@ export default async function handler(req, res) {
 
   let url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}?pageSize=100`;
 
-  // Publish = true のみ取得
-  url += `&filterByFormula=${encodeURIComponent("Publish=TRUE()")}`;
+  if(tableName == 'Tour'){
+    // Publish = true のみ取得
+    url += `&filterByFormula=${encodeURIComponent("Publish=TRUE()")}`;
+  }
   
   // ソート条件を追加
   url += `&sort[0][field]=${encodeURIComponent(sortField)}&sort[0][direction]=${encodeURIComponent(sortDirection)}`;
