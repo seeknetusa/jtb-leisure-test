@@ -42,9 +42,9 @@ export default async function handler(req, res) {
 
 
   // 固定の公開フラグ（Tourのみ）
-  //if (tableName === 'Tour') {
-  //  formulas.push(`{Publish}=TRUE()`);
-  //}
+  if (tableName === 'Tour') {
+    formulas.push(`{Publish}=TRUE()`);
+  }
   
   /*
   // filterField 1
