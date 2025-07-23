@@ -14,6 +14,7 @@ export default async function handler(req, res) {
   const token = process.env.AIRTABLE_TOKEN;
   const baseId = process.env.AIRTABLE_BASE_ID;
 
+  /*
   let tableName;
 
   switch (table) {
@@ -29,8 +30,9 @@ export default async function handler(req, res) {
     default:
       tableName = process.env.AIRTABLE_TABLE_NAME;
   }
-  
-  //const tableName = process.env.AIRTABLE_TABLE_NAME;
+  */
+
+  const tableName = process.env.AIRTABLE_TABLE_NAME;
 
   const { sortField = 'Name', sortDirection = 'asc', offset = '' } = req.query;
 
