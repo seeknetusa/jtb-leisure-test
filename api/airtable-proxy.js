@@ -13,28 +13,16 @@ export default async function handler(req, res) {
 
   const token = process.env.AIRTABLE_TOKEN;
   const baseId = process.env.AIRTABLE_BASE_ID;
+  //const tableName = process.env.AIRTABLE_TABLE_NAME;
 
-  /*
-  let tableName;
+  const { sortField = 'Name', sortDirection = 'asc', offset = '', table = '1' } = req.query;
 
-  switch (table) {
-    case '1':
-      tableName = process.env.AIRTABLE_TABLE_NAME;
-      break;
-    case '2':
-      tableName = 'Style';
-      break;
-    case '3':
-      tableName = 'AnotherTableName'; // 必要に応じて
-      break;
-    default:
-      tableName = process.env.AIRTABLE_TABLE_NAME;
-  }
-  */
+  const tableMap = {
+    '1': process.env.AIRTABLE_TABLE_NAME,
+    '2': 'Style',
+  };
 
-  const tableName = process.env.AIRTABLE_TABLE_NAME;
-
-  const { sortField = 'Name', sortDirection = 'asc', offset = '' } = req.query;
+  const tableName = tableMap[table];
 
   let url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}?pageSize=100`;
   url += `&sort[0][field]=${encodeURIComponent(sortField)}&sort[0][direction]=${encodeURIComponent(sortDirection)}`;
