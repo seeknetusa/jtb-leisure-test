@@ -53,7 +53,7 @@ export default async function handler(req, res) {
   //if (filterField && filterValue !== undefined) {
   //  url += `&filterByFormula=${encodeURIComponent(`${filterField}=TRUE()`)}`;
   //d}
-/*
+
   // 第一条件
   if (filterField && filterValue !== undefined) {
     let formula1 = '';
@@ -67,6 +67,7 @@ export default async function handler(req, res) {
 
     filterFormula = formula1;
 
+    /*
     // 第二条件（ANDで結合）
     if (filterField2 && filterValue2 !== undefined) {
       let formula2 = '';
@@ -79,11 +80,13 @@ export default async function handler(req, res) {
       }
 
       filterFormula = `AND(${formula1}, ${formula2})`;
+      
     }
+*/
 
     url += `&filterByFormula=${encodeURIComponent(filterFormula)}`;
   }
-*/
+
 
   // ソート条件を追加
   url += `&sort[0][field]=${encodeURIComponent(sortField)}&sort[0][direction]=${encodeURIComponent(sortDirection)}`;
