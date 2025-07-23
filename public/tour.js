@@ -35,7 +35,7 @@ async function fetchAndStoreData(withUI = true) {
   try {
     // Airtable API から全データ取得（ページネーション対応）
     while (!done) {
-      let url = `${apiBaseUrl}?sortField=${encodeURIComponent(currentSortField)}&sortDirection=${encodeURIComponent(currentSortDirection)}`;
+      let url = `${apiBaseUrl}?table=1&sortField=${encodeURIComponent(currentSortField)}&sortDirection=${encodeURIComponent(currentSortDirection)}`;
       if (offset) url += `&offset=${offset}`;
 
       const res = await fetch(url);
@@ -107,7 +107,7 @@ function generateFilters() {
 
   // TourデータからユニークなSTYLE・INTEREST・DESTINATIONを抽出
   filteredData.forEach(r => {
-    const styleField = r.fields["Style"];
+    const styleField = r.fields["Name (from Style)"];
     const interestField = r.fields["Interest"];
     const destinationField = r.fields["Destination"];
 
@@ -163,7 +163,7 @@ function generateFilters() {
     return counts;
   };
 
-  const styleCounts = countValues("Style");
+  const styleCounts = countValues("Name (from Style)");
   const interestCounts = countValues("Interest");
   const destinationCounts = countValues("Destination");
 
@@ -262,7 +262,7 @@ function applyFilter() {
 
   // 各フィルター条件を満たすレコードのみ残す
   filteredData = allData.filter(record => {
-    const styleField = record.fields["Style"] || '';
+    const styleField = record.fields["Name (from Style)"] || '';
     const interestField = record.fields["Interest"] || '';
     const destinationField = record.fields["Destination"] || '';
     const days = record.fields.Days;
@@ -333,14 +333,16 @@ async function displayCurrentPage() {
   container.innerHTML = '';
 
   const list = document.createElement('ul');
-  list.className = 'airtable-list'; // ← ✅ これを追加
+  list.className = 'airtable-list'; 
 
   const start = (currentPage - 1) * pageSize;
   const end = start + pageSize;
   const pageItems = filteredData.slice(start, end);
 
+  const logoMap = await fetchStyles();
+
   for (const record of pageItems) {
-    const card = createTourCardElement(record);
+    const card = createTourCardElement(record, logoMap);
     list.appendChild(card);
   }
 
@@ -450,7 +452,7 @@ function generateSearchDropdowns() {
 
   // 全レコードからスタイル・デスティネーション・日数を収集
   filteredData.forEach(r => {
-    const styleField = r.fields["Style"];
+    const styleField = r.fields["Name (from Style)"];
     const destinationField = r.fields["Destination"];
     const days = r.fields["Days"];
 
@@ -520,7 +522,7 @@ function generateSearchDropdowns() {
 
     // 条件に一致するレコードから目的地・日数を収集
     allData.forEach(record => {
-      const styleField = record.fields["Style"];
+      const styleField = record.fields["Name (from Style)"];
       const destinationField = record.fields["Destination"];
       const days = record.fields["Days"];
 
@@ -659,10 +661,12 @@ document.getElementById('clear-filters').addEventListener('click', () => {
 
 
 
-function createTourCardElement(record) {
+function createTourCardElement(record, logoMap) {
   const f = record.fields;
   const template = document.getElementById('tour-card-template');
   const clone = template.content.cloneNode(true);
+  
+  console.log('f', f);
 
   // 画像
   const images = f.Images || [];
@@ -674,16 +678,21 @@ function createTourCardElement(record) {
   else if (imageEl) imageEl.remove();
 
   // ロゴ
+  /*
   const tourLogos = f["Tour Logo"] || [];
   const logoUrl = (Array.isArray(tourLogos) && tourLogos.length > 0)
     ? tourLogos[0].thumbnails?.full?.url || tourLogos[0].url
     : '';
+  */
+  const styleId = f["Style"]?.[0];
+  const logoUrl = logoMap[styleId] || '';
+
   const logoEl = clone.querySelector('.tour-logo');
   if (logoUrl && logoEl) logoEl.src = logoUrl;
   else if (logoEl) logoEl.remove();
 
   clone.querySelector('.tour-title').textContent = f.Name || '';
-  clone.querySelector('.tour-style').textContent = f.Style || '';
+  clone.querySelector('.tour-style').textContent = f["Name (from Style)"][0] || '';
 
   const startDate = f["Tour Start Date (from Inquiry)"]?.[0] || f["Start Date"];
   const endDate = f["Tour End Date (from Inquiry)"]?.[0] || f["End Date"];
@@ -721,7 +730,7 @@ async function fetchRecommendedTours(containerId) {
   try {
     // Airtableから全データをページネーション付きで取得
     while (!done) {
-      let url = `${apiBaseUrl}?sortField=${encodeURIComponent(currentSortField)}&sortDirection=${encodeURIComponent(currentSortDirection)}`;
+      let url = `${apiBaseUrl}?table=1&sortField=${encodeURIComponent(currentSortField)}&sortDirection=${encodeURIComponent(currentSortDirection)}`;
       if (offset) url += `&offset=${offset}`;
 
       const res = await fetch(url);
@@ -745,6 +754,43 @@ async function fetchRecommendedTours(containerId) {
     // カルーセルにツアーカードを描画
     renderRecommendedCarousel(all, containerId);
 
+  } catch (e) {
+    console.error("Failed to fetch data:", e);
+  }
+}
+
+async function fetchStyles() {
+  let all = [];
+  let offset = null;
+  let done = false;
+
+  try {
+    let url = `${apiBaseUrl}?table=2`;
+    //if (offset) url += `&offset=${offset}`;
+
+    const res = await fetch(url);
+    if (!res.ok) {
+      const err = await res.text();
+      console.error(`API error: ${res.status}\n${err}`);
+      return;
+    }
+
+    const data = await res.json();
+
+    const logoMap = {};
+
+    data.records.forEach(record => {
+      const id = record.id;
+      const logoArray = record.fields.Logo;
+
+      if (Array.isArray(logoArray) && logoArray.length > 0) {
+        const fullThumb = logoArray[0]?.thumbnails?.full?.url;
+        if (fullThumb) {
+          logoMap[id] = fullThumb;
+        }
+      }
+    });
+    return logoMap;
   } catch (e) {
     console.error("Failed to fetch data:", e);
   }
