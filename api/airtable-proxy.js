@@ -50,29 +50,34 @@ export default async function handler(req, res) {
   // filterField 1
   if (filterField && filterValue !== undefined) {
     if (filterField === 'RECORD_ID()') {
-      // RECORD_ID() での検索（特殊ケース）
       formulas.push(`RECORD_ID()="${filterValue}"`);
     } else if (filterValue === 'true') {
       formulas.push(`{${filterField}}=TRUE()`);
     } else if (filterValue === 'false') {
       formulas.push(`{${filterField}}=FALSE()`);
+    } else if (!isNaN(filterValue)) {
+      // 数値検索の場合（例：ID (from Style) が [4] の中に 4 を含む）
+      formulas.push(`SEARCH(${filterValue}, ARRAYJOIN({${filterField}}))`);
     } else {
-      formulas.push(`FIND("${filterValue}", {${filterField}})`);
+      formulas.push(`FIND("${filterValue}", ARRAYJOIN({${filterField}}))`);
     }
   }
+
 
 
   // filterField 2（必要なら）
   if (filterField2 && filterValue2 !== undefined) {
     if (filterField2 === 'RECORD_ID()') {
-      // RECORD_ID() での検索（特殊ケース）
-      formulas.push(`RECORD_ID()="${filterValue2}"`);
+      formulas.push(`RECORD_ID()="${filterValue}"`);
     } else if (filterValue2 === 'true') {
       formulas.push(`{${filterField2}}=TRUE()`);
     } else if (filterValue2 === 'false') {
-      formulas.push(`{${filterField}}=FALSE()`);
+      formulas.push(`{${filterField2}}=FALSE()`);
+    } else if (!isNaN(filterValue2)) {
+      // 数値検索の場合（例：ID (from Style) が [4] の中に 4 を含む）
+      formulas.push(`SEARCH(${filterValue2}, ARRAYJOIN({${filterField2}}))`);
     } else {
-      formulas.push(`FIND("${filterValue2}", {${filterField2}})`);
+      formulas.push(`FIND("${filterValue2}", ARRAYJOIN({${filterField2}}))`);
     }
   }
 
