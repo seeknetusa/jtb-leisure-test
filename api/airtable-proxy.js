@@ -27,7 +27,7 @@ export default async function handler(req, res) {
       tableName = 'AnotherTableName'; // 必要に応じて
       break;
     default:
-      throw new Error(`Invalid table parameter: ${table}`);
+      tableName = process.env.AIRTABLE_TABLE_NAME;
   }
   
   //const tableName = process.env.AIRTABLE_TABLE_NAME;
