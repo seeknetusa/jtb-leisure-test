@@ -91,6 +91,9 @@ export default async function handler(req, res) {
   if (offset) url += `&offset=${offset}`;
   
   try {
+    console.log('url', url);
+
+    /*
     const airtableRes = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -102,6 +105,7 @@ export default async function handler(req, res) {
 
     const data = await airtableRes.json();
     return res.status(200).json(data);
+    */
   } catch (e) {
     return res.status(500).json({ error: 'Server error', detail: e.message });
   }
