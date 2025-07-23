@@ -72,11 +72,18 @@ export default async function handler(req, res) {
       formulas.push(`{${filterField2}}=TRUE()`);
     } else if (filterValue2 === 'false') {
       formulas.push(`{${filterField2}}=FALSE()`);
-    } else if (!isNaN(filterValue2)) {
-      // 数値検索の場合（例：ID (from Style) が [4] の中に 4 を含む）
-      formulas.push(`SEARCH(${filterValue2}, ARRAYJOIN({${filterField2}}))`);
     } else {
-      formulas.push(`FIND("${filterValue2}", ARRAYJOIN({${filterField2}}))`);
+      // カンマ区切りなら OR 条件で部分一致（例：Destination=Tokyo,Osaka）
+      const values = decodeURIComponent(filterValue2).split(',').map(v => v.trim());
+
+      if (values.length > 1) {
+        const subFormulas = values.map(val => `FIND("${val}", ARRAYJOIN({${filterField2}}))`);
+        formulas.push(`OR(${subFormulas.join(',')})`);
+      } else if (!isNaN(values[0])) {
+        formulas.push(`SEARCH(",${values[0]},", "," & ARRAYJOIN({${filterField2}}, ",") & ",")`);
+      } else {
+        formulas.push(`FIND("${values[0]}", ARRAYJOIN({${filterField2}}))`);
+      }
     }
   }
 
