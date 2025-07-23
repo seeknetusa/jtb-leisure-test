@@ -25,9 +25,16 @@ export default async function handler(req, res) {
   const tableName = tableMap[table];
 
   let url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}?pageSize=100`;
-  url += `&sort[0][field]=${encodeURIComponent(sortField)}&sort[0][direction]=${encodeURIComponent(sortDirection)}`;
-  if (offset) url += `&offset=${offset}`;
 
+  // Publish = true のみ取得
+  url += `&filterByFormula=${encodeURIComponent("Publish=TRUE()")}`;
+  
+  // ソート条件を追加
+  url += `&sort[0][field]=${encodeURIComponent(sortField)}&sort[0][direction]=${encodeURIComponent(sortDirection)}`;
+  
+  // ページネーションの offset がある場合
+  if (offset) url += `&offset=${offset}`;
+  
   try {
     const airtableRes = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` }
