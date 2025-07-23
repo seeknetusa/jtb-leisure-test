@@ -55,14 +55,20 @@ export default async function handler(req, res) {
       formulas.push(`{${filterField}}=TRUE()`);
     } else if (filterValue === 'false') {
       formulas.push(`{${filterField}}=FALSE()`);
-    } else if (!isNaN(filterValue)) {
-      // ✅ 数値の完全一致を検索（例：ID (from Style) に 4 が含まれるか）
-      formulas.push(`SEARCH(",${filterValue},", "," & ARRAYJOIN({${filterField}}, ",") & ",")`);
     } else {
-      // ✅ 文字列は部分一致で検索
-      formulas.push(`FIND("${filterValue}", ARRAYJOIN({${filterField}}))`);
+      // カンマ区切りなら OR 条件で部分一致（例：Destination=Tokyo,Osaka）
+      const values = decodeURIComponent(filterValue).split(',').map(v => v.trim());
+
+      if (values.length > 1) {
+        const subFormulas = values.map(val => `FIND("${val}", ARRAYJOIN({${filterField}}))`);
+        formulas.push(`OR(${subFormulas.join(',')})`);
+      } else if (!isNaN(values[0])) {
+        formulas.push(`SEARCH(",${values[0]},", "," & ARRAYJOIN({${filterField}}, ",") & ",")`);
+      } else {
+        formulas.push(`FIND("${values[0]}", ARRAYJOIN({${filterField}}))`);
+      }
     }
-  }  
+  } 
 
   // filterField 2（必要なら）
   if (filterField2 && filterValue2 !== undefined) {
@@ -102,7 +108,6 @@ export default async function handler(req, res) {
   if (offset) url += `&offset=${offset}`;
   
   try {
-    //console.log('url', url);
     const airtableRes = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` }
     });
