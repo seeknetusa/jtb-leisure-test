@@ -49,7 +49,10 @@ export default async function handler(req, res) {
   
   // filterField 1
   if (filterField && filterValue !== undefined) {
-    if (filterValue === 'true') {
+    if (filterField === 'RECORD_ID()') {
+      // RECORD_ID() での検索（特殊ケース）
+      formulas.push(`RECORD_ID()="${filterValue}"`);
+    } else if (filterValue === 'true') {
       formulas.push(`{${filterField}}=TRUE()`);
     } else if (filterValue === 'false') {
       formulas.push(`{${filterField}}=FALSE()`);
@@ -58,12 +61,16 @@ export default async function handler(req, res) {
     }
   }
 
+
   // filterField 2（必要なら）
   if (filterField2 && filterValue2 !== undefined) {
-    if (filterValue2 === 'true') {
+    if (filterField2 === 'RECORD_ID()') {
+      // RECORD_ID() での検索（特殊ケース）
+      formulas.push(`RECORD_ID()="${filterValue2}"`);
+    } else if (filterValue2 === 'true') {
       formulas.push(`{${filterField2}}=TRUE()`);
     } else if (filterValue2 === 'false') {
-      formulas.push(`{${filterField2}}=FALSE()`);
+      formulas.push(`{${filterField}}=FALSE()`);
     } else {
       formulas.push(`FIND("${filterValue2}", {${filterField2}})`);
     }
