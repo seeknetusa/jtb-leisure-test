@@ -63,12 +63,10 @@ export default async function handler(req, res) {
     }
   }
 
-
-
   // filterField 2（必要なら）
   if (filterField2 && filterValue2 !== undefined) {
     if (filterField2 === 'RECORD_ID()') {
-      formulas.push(`RECORD_ID()="${filterValue}"`);
+      formulas.push(`RECORD_ID()="${filterValue2}"`);
     } else if (filterValue2 === 'true') {
       formulas.push(`{${filterField2}}=TRUE()`);
     } else if (filterValue2 === 'false') {
