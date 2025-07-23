@@ -41,13 +41,12 @@ export default async function handler(req, res) {
   }
 
   let formulas = [];
-  
+
   // 固定の公開フラグ（Tourのみ）
   if (tableName === 'Tour') {
     formulas.push(`{Publish}=TRUE()`);
   }
   
-  /*
   // filterField 1
   if (filterField && filterValue !== undefined) {
     if (filterValue === 'true') {
@@ -69,15 +68,14 @@ export default async function handler(req, res) {
       formulas.push(`FIND("${filterValue2}", {${filterField2}})`);
     }
   }
-  */
 
   // Airtable URL 構築
   let url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}?pageSize=100`;
 
-  //if (formulas.length > 0) {
-  //  const finalFormula = formulas.length === 1 ? formulas[0] : `AND(${formulas.join(',')})`;
-  //  url += `&filterByFormula=${encodeURIComponent(finalFormula)}`;
-  //}
+  if (formulas.length > 0) {
+    const finalFormula = formulas.length === 1 ? formulas[0] : `AND(${formulas.join(',')})`;
+    url += `&filterByFormula=${encodeURIComponent(finalFormula)}`;
+  }
 
   // ソート条件を追加
   url += `&sort[0][field]=${encodeURIComponent(sortField)}&sort[0][direction]=${encodeURIComponent(sortDirection)}`;
@@ -87,8 +85,6 @@ export default async function handler(req, res) {
   
   try {
     //console.log('url', url);
-
-
     const airtableRes = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` }
     });
