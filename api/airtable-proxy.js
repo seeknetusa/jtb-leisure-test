@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   };
 
   //const tableName = process.env.AIRTABLE_TABLE_NAME;
-  const tableName = tableMap[table];
+  const tableName = tableMap[encodeURIComponent(table)];
 
   const { sortField = 'Name', sortDirection = 'asc', offset = '' } = req.query;
 
