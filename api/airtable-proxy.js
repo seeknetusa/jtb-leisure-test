@@ -13,14 +13,24 @@ export default async function handler(req, res) {
 
   const token = process.env.AIRTABLE_TOKEN;
   const baseId = process.env.AIRTABLE_BASE_ID;
-  /*
-  const tableMap = {
-    "1": process.env.AIRTABLE_TABLE_NAME,
-    "2": "Style",
-  };
-  */
-  //const tableName = tableMap[String(table)];
-  const tableName = process.env.AIRTABLE_TABLE_NAME;
+
+  let tableName;
+
+  switch (table) {
+    case '1':
+      tableName = process.env.AIRTABLE_TABLE_NAME;
+      break;
+    case '2':
+      tableName = 'Style';
+      break;
+    case '3':
+      tableName = 'AnotherTableName'; // 必要に応じて
+      break;
+    default:
+      throw new Error(`Invalid table parameter: ${table}`);
+  }
+  
+  //const tableName = process.env.AIRTABLE_TABLE_NAME;
 
   const { sortField = 'Name', sortDirection = 'asc', offset = '' } = req.query;
 
