@@ -14,6 +14,8 @@ export default async function handler(req, res) {
   const token = process.env.AIRTABLE_TOKEN;
   const baseId = process.env.AIRTABLE_BASE_ID;
 
+  console.log('table', table);
+  console.log('sortField', sortField);
   /*
   let tableName;
 
