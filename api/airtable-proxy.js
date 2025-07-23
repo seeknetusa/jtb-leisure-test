@@ -15,14 +15,32 @@ export default async function handler(req, res) {
   const baseId = process.env.AIRTABLE_BASE_ID;
   //const tableName = process.env.AIRTABLE_TABLE_NAME;
 
-  const { sortField = 'Name', sortDirection = 'asc', offset = '', table = '1' } = req.query;
+  const {
+    table,
+    sortField = 'Name',
+    sortDirection = 'asc',
+    offset = '',
+    filterField,
+    filterValue,
+    filterField2,
+    filterValue2,
+  } = req.query;
+  
+  let filterFormula = '';
 
-  const tableMap = {
-    '1': process.env.AIRTABLE_TABLE_NAME,
-    '2': 'Style',
-  };
+  let tableName;
+  switch (table) {
+    case '1':
+      tableName = process.env.AIRTABLE_TABLE_NAME;
+      break;
+    case '2':
+      tableName = 'Style';
+      break;
+    default:
+      tableName = process.env.AIRTABLE_TABLE_NAME;;
+  }
 
-  const tableName = tableMap[table];
+
 
   let url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}?pageSize=100`;
 
@@ -31,6 +49,41 @@ export default async function handler(req, res) {
     url += `&filterByFormula=${encodeURIComponent("Publish=TRUE()")}`;
   }
   
+  // ✅ フィルター条件を追加（任意）
+  if (filterField && filterValue !== undefined) {
+    url += `&filterByFormula=${encodeURIComponent(`${filterField}=TRUE()`)}`;
+  }
+
+  // 第一条件
+  if (filterField && filterValue !== undefined) {
+    let formula1 = '';
+    if (filterValue === 'true' || filterValue === 'TRUE()') {
+      formula1 = `{${filterField}}=TRUE()`;
+    } else if (filterValue === 'false' || filterValue === 'FALSE()') {
+      formula1 = `{${filterField}}=FALSE()`;
+    } else {
+      formula1 = `FIND("${filterValue}", {${filterField}})`;
+    }
+
+    filterFormula = formula1;
+
+    // 第二条件（ANDで結合）
+    if (filterField2 && filterValue2 !== undefined) {
+      let formula2 = '';
+      if (filterValue2 === 'true' || filterValue2 === 'TRUE()') {
+        formula2 = `{${filterField2}}=TRUE()`;
+      } else if (filterValue2 === 'false' || filterValue2 === 'FALSE()') {
+        formula2 = `{${filterField2}}=FALSE()`;
+      } else {
+        formula2 = `FIND("${filterValue2}", {${filterField2}})`;
+      }
+
+      filterFormula = `AND(${formula1}, ${formula2})`;
+    }
+
+    url += `&filterByFormula=${encodeURIComponent(filterFormula)}`;
+  }
+
   // ソート条件を追加
   url += `&sort[0][field]=${encodeURIComponent(sortField)}&sort[0][direction]=${encodeURIComponent(sortDirection)}`;
   
