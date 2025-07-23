@@ -56,12 +56,13 @@ export default async function handler(req, res) {
     } else if (filterValue === 'false') {
       formulas.push(`{${filterField}}=FALSE()`);
     } else if (!isNaN(filterValue)) {
-      // 数値検索の場合（例：ID (from Style) が [4] の中に 4 を含む）
-      formulas.push(`SEARCH(${filterValue}, ARRAYJOIN({${filterField}}))`);
+      // ✅ 数値の完全一致を検索（例：ID (from Style) に 4 が含まれるか）
+      formulas.push(`SEARCH(",${filterValue},", "," & ARRAYJOIN({${filterField}}, ",") & ",")`);
     } else {
+      // ✅ 文字列は部分一致で検索
       formulas.push(`FIND("${filterValue}", ARRAYJOIN({${filterField}}))`);
     }
-  }
+  }  
 
   // filterField 2（必要なら）
   if (filterField2 && filterValue2 !== undefined) {
