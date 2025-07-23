@@ -41,52 +41,40 @@ export default async function handler(req, res) {
   }
 
 
-
-  let url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}?pageSize=100`;
-
-  if(tableName == 'Tour'){
-    // Publish = true のみ取得
-    url += `&filterByFormula=${encodeURIComponent("Publish=TRUE()")}`;
+  // 固定の公開フラグ（Tourのみ）
+  if (tableName === 'Tour') {
+    formulas.push(`{Publish}=TRUE()`);
   }
   
-  // ✅ フィルター条件を追加（任意）
-  //if (filterField && filterValue !== undefined) {
-  //  url += `&filterByFormula=${encodeURIComponent(`${filterField}=TRUE()`)}`;
-  //d}
-
-  // 第一条件
+  // filterField 1
   if (filterField && filterValue !== undefined) {
-    let formula1 = '';
-    if (filterValue === 'true' || filterValue === 'TRUE()') {
-      formula1 = `{${filterField}}=TRUE()`;
-    } else if (filterValue === 'false' || filterValue === 'FALSE()') {
-      formula1 = `{${filterField}}=FALSE()`;
+    if (filterValue === 'true') {
+      formulas.push(`{${filterField}}=TRUE()`);
+    } else if (filterValue === 'false') {
+      formulas.push(`{${filterField}}=FALSE()`);
     } else {
-      formula1 = `FIND("${filterValue}", {${filterField}})`;
+      formulas.push(`FIND("${filterValue}", {${filterField}})`);
     }
-
-    filterFormula = formula1;
-
-    /*
-    // 第二条件（ANDで結合）
-    if (filterField2 && filterValue2 !== undefined) {
-      let formula2 = '';
-      if (filterValue2 === 'true' || filterValue2 === 'TRUE()') {
-        formula2 = `{${filterField2}}=TRUE()`;
-      } else if (filterValue2 === 'false' || filterValue2 === 'FALSE()') {
-        formula2 = `{${filterField2}}=FALSE()`;
-      } else {
-        formula2 = `FIND("${filterValue2}", {${filterField2}})`;
-      }
-
-      filterFormula = `AND(${formula1}, ${formula2})`;
-      
-    }
-*/
-
-    url += `&filterByFormula=${encodeURIComponent(filterFormula)}`;
   }
 
+  // filterField 2（必要なら）
+  if (filterField2 && filterValue2 !== undefined) {
+    if (filterValue2 === 'true') {
+      formulas.push(`{${filterField2}}=TRUE()`);
+    } else if (filterValue2 === 'false') {
+      formulas.push(`{${filterField2}}=FALSE()`);
+    } else {
+      formulas.push(`FIND("${filterValue2}", {${filterField2}})`);
+    }
+  }
+
+  // Airtable URL 構築
+  let url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}?pageSize=100`;
+
+  if (formulas.length > 0) {
+    const finalFormula = formulas.length === 1 ? formulas[0] : `AND(${formulas.join(',')})`;
+    url += `&filterByFormula=${encodeURIComponent(finalFormula)}`;
+  }
 
   // ソート条件を追加
   url += `&sort[0][field]=${encodeURIComponent(sortField)}&sort[0][direction]=${encodeURIComponent(sortDirection)}`;
