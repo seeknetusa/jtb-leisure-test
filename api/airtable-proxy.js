@@ -40,7 +40,8 @@ export default async function handler(req, res) {
       tableName = process.env.AIRTABLE_TABLE_NAME;;
   }
 
-
+  let formulas = [];
+  
   // 固定の公開フラグ（Tourのみ）
   if (tableName === 'Tour') {
     formulas.push(`{Publish}=TRUE()`);
