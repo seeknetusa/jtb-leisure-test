@@ -46,6 +46,7 @@ export default async function handler(req, res) {
     formulas.push(`{Publish}=TRUE()`);
   }
   
+  /*
   // filterField 1
   if (filterField && filterValue !== undefined) {
     if (filterValue === 'true') {
@@ -67,7 +68,8 @@ export default async function handler(req, res) {
       formulas.push(`FIND("${filterValue2}", {${filterField2}})`);
     }
   }
-
+  */
+ 
   // Airtable URL 構築
   let url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}?pageSize=100`;
 
