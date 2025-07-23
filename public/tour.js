@@ -728,12 +728,20 @@ async function fetchRecommendedTours(containerId) {
   let done = false;
 
   try {
-    // Airtableから全データをページネーション付きで取得
+    // Airtableからデータを取得
     while (!done) {
       let url = `${apiBaseUrl}?table=1&sortField=${encodeURIComponent(currentSortField)}&sortDirection=${encodeURIComponent(currentSortDirection)}`;
+      
+      // ✅ フィルター条件追加 (Recommended=true)
+      url += `&filterField=Recommended&filterValue=true`;
+
       if (offset) url += `&offset=${offset}`;
 
       const res = await fetch(url);
+
+      console.log('res', res);
+
+
       if (!res.ok) {
         const err = await res.text();
         console.error(`API error: ${res.status}\n${err}`);
@@ -748,7 +756,12 @@ async function fetchRecommendedTours(containerId) {
 
       all.push(...data.records);
       offset = data.offset;
+
+      console.log('offset', offset);
+
       done = !offset;
+
+
     }
 
     // カルーセルにツアーカードを描画
@@ -796,15 +809,14 @@ async function fetchStyles() {
   }
 }
 
-function renderRecommendedCarousel(tours, containerId) {
+async function renderRecommendedCarousel(tours, containerId) {
   const container = document.getElementById(containerId);
   container.innerHTML = '';
 
+  const logoMap = await fetchStyles();
+
   tours.forEach(record => {
-    const card = createTourCardElement(record); // ← 共通テンプレ使ってる
+    const card = createTourCardElement(record, logoMap); // ← 共通テンプレ使ってる
     container.appendChild(card);
   });
 }
-
-
-

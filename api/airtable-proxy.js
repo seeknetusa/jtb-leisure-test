@@ -53,7 +53,7 @@ export default async function handler(req, res) {
   //if (filterField && filterValue !== undefined) {
   //  url += `&filterByFormula=${encodeURIComponent(`${filterField}=TRUE()`)}`;
   //d}
-
+/*
   // 第一条件
   if (filterField && filterValue !== undefined) {
     let formula1 = '';
@@ -83,6 +83,7 @@ export default async function handler(req, res) {
 
     url += `&filterByFormula=${encodeURIComponent(filterFormula)}`;
   }
+*/
 
   // ソート条件を追加
   url += `&sort[0][field]=${encodeURIComponent(sortField)}&sort[0][direction]=${encodeURIComponent(sortDirection)}`;
@@ -91,9 +92,9 @@ export default async function handler(req, res) {
   if (offset) url += `&offset=${offset}`;
   
   try {
-    console.log('url', url);
+    //console.log('url', url);
 
-    /*
+
     const airtableRes = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -105,7 +106,7 @@ export default async function handler(req, res) {
 
     const data = await airtableRes.json();
     return res.status(200).json(data);
-    */
+
   } catch (e) {
     return res.status(500).json({ error: 'Server error', detail: e.message });
   }
