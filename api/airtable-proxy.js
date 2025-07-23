@@ -50,9 +50,9 @@ export default async function handler(req, res) {
   }
   
   // ✅ フィルター条件を追加（任意）
-  if (filterField && filterValue !== undefined) {
-    url += `&filterByFormula=${encodeURIComponent(`${filterField}=TRUE()`)}`;
-  }
+  //if (filterField && filterValue !== undefined) {
+  //  url += `&filterByFormula=${encodeURIComponent(`${filterField}=TRUE()`)}`;
+  //d}
 
   // 第一条件
   if (filterField && filterValue !== undefined) {
