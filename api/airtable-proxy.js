@@ -13,7 +13,13 @@ export default async function handler(req, res) {
 
   const token = process.env.AIRTABLE_TOKEN;
   const baseId = process.env.AIRTABLE_BASE_ID;
-  const tableName = process.env.AIRTABLE_TABLE_NAME;
+  const tableMap = {
+    1: process.env.AIRTABLE_TABLE_NAME_1,
+    2: 'Style',
+  };
+
+  //const tableName = process.env.AIRTABLE_TABLE_NAME;
+  const tableName = tableMap[table];
 
   const { sortField = 'Name', sortDirection = 'asc', offset = '' } = req.query;
 
