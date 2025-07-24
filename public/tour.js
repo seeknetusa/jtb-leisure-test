@@ -318,7 +318,7 @@ function paginateAndDisplay() {
   totalPages = Math.ceil(filteredData.length / pageSize);
 
   // 総件数を画面に表示
-  document.getElementById('total-count').textContent = `${filteredData.length} Tours Found`;
+  document.getElementById('total-count').innerHTML  = `<div id="total-count"><strong>${filteredData.length}</strong>  Tours Found`;
 
   // ページネーションボタンを生成
   generatePaginationButtons();
@@ -712,7 +712,7 @@ function createTourCardElement(record, logoMap) {
   // -----------------------------
   // ツアー日数表示
   // -----------------------------
-  clone.querySelector('.tour-length').textContent = `${f.Days || ''} DAYS ${f.Nights || ''} NIGHTS`;
+  clone.querySelector('.tour-length').innerHTML  = `<strong>${f.Days || ''}</strong> DAYS <strong>${f.Nights || ''}</strong> NIGHTS`;
 
   // -----------------------------
   // 価格表示（テキスト or 数値）
@@ -725,13 +725,28 @@ function createTourCardElement(record, logoMap) {
     ? raw
     : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(numeric);
   const priceEl = clone.querySelector('.tour-price');
-  priceEl.textContent = priceText || `from ${priceFormatted} per person`;
+  priceEl.innerHTML = priceText || `from <strong>${priceFormatted}</strong> per person`;
+
+  console.log('record', record);
 
   // -----------------------------
   // 詳細リンクの設定
   // -----------------------------
   const linkEl = clone.querySelector('a.btn');
-  if (linkEl) linkEl.href = f.URL || '#';
+  if (linkEl) {
+    const pdfArray = f.PDF;
+    const pdfUrl = Array.isArray(pdfArray) && pdfArray.length > 0 ? pdfArray[0].url : '';
+    const href = f.URL || pdfUrl || `?id=${record.id}`;
+
+    const hasLink = f.URL || pdfUrl;
+
+    const icon = hasLink
+      ? 'https://cdn.prod.website-files.com/6865cdc559f013614975d0bc/687fe53ee93aa36b8503d408_arrow-up-right-from-square-regular-full-red.svg'
+      : 'https://cdn.prod.website-files.com/6865cdc559f013614975d0bc/687fe4d5ddfd614d8bec3764_arrow-right-regular-full-red.svg';
+
+    linkEl.href = href;
+    linkEl.innerHTML = `View Itinerary <span><img src="${icon}" alt=""></span>`;
+  }
 
   return clone; // 完成したDOMノードを返す
 }
