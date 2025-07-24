@@ -94,7 +94,7 @@ export default async function handler(req, res) {
   }
 
   // Airtable URL 構築
-  let url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}?pageSize=1`;
+  let url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}?pageSize=100`;
 
   if (formulas.length > 0) {
     const finalFormula = formulas.length === 1 ? formulas[0] : `AND(${formulas.join(',')})`;
