@@ -728,19 +728,36 @@ async function fetchRecommendedTours(containerId) {
   let done = false;
 
   try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const recordId = urlParams.get('id');
+    const recordDestination = urlParams.get('destination');
+
+    let encodedDestinations;
+    if(recordId){
+      const Tour = await fetchTour(recordId);
+      encodedDestinations = extractUniqueDestinations(Tour.records);
+    }
+    if(recordDestination){
+      encodedDestinations = recordDestination;
+    }
+
     // Airtableからデータを取得
     while (!done) {
-      let url = `${apiBaseUrl}?table=1&sortField=${encodeURIComponent(currentSortField)}&sortDirection=${encodeURIComponent(currentSortDirection)}`;
+      let url = `${apiBaseUrl}?table=1`;
       
       // ✅ フィルター条件追加 (Recommended=true)
-      url += `&filterField=Recommended&filterValue=true`;
+      if(recordId){
+        url += `&filterField=${encodeURIComponent("ID (from Style)")}&filterValue=1`; // Day Tour
+        url += `&filterField2=${encodeURIComponent("Destination")}&filterValue2=${encodedDestinations}`; // Destination
+      }else if(recordDestination){
+        url += `&filterField2=${encodeURIComponent("Destination")}&filterValue2=${encodeURIComponent(encodedDestinations)}`; // Destination
+      }else{
+        url += `&filterField=Recommended&filterValue=true`;
+      }
 
       if (offset) url += `&offset=${offset}`;
 
       const res = await fetch(url);
-
-      console.log('res', res);
-
 
       if (!res.ok) {
         const err = await res.text();
@@ -749,6 +766,7 @@ async function fetchRecommendedTours(containerId) {
       }
 
       const data = await res.json();
+
       if (!data.records) {
         console.error("Invalid format received from Airtable");
         return;
@@ -756,30 +774,19 @@ async function fetchRecommendedTours(containerId) {
 
       all.push(...data.records);
       offset = data.offset;
-
-      console.log('offset', offset);
-
       done = !offset;
-
-
     }
 
     // カルーセルにツアーカードを描画
     renderRecommendedCarousel(all, containerId);
-
   } catch (e) {
     console.error("Failed to fetch data:", e);
   }
 }
 
 async function fetchStyles() {
-  let all = [];
-  let offset = null;
-  let done = false;
-
   try {
     let url = `${apiBaseUrl}?table=2`;
-    //if (offset) url += `&offset=${offset}`;
 
     const res = await fetch(url);
     if (!res.ok) {
@@ -803,7 +810,27 @@ async function fetchStyles() {
         }
       }
     });
+
     return logoMap;
+  } catch (e) {
+    console.error("Failed to fetch data:", e);
+  }
+}
+
+async function fetchTour(recordId) {
+  try {
+    let url = `${apiBaseUrl}?table=1`;
+    url += `&filterField=RECORD_ID()&filterValue=${recordId}`;
+
+    const res = await fetch(url);
+    if (!res.ok) {
+      const err = await res.text();
+      console.error(`API error: ${res.status}\n${err}`);
+      return;
+    }
+
+    const data = await res.json();
+    return data;
   } catch (e) {
     console.error("Failed to fetch data:", e);
   }
@@ -815,8 +842,23 @@ async function renderRecommendedCarousel(tours, containerId) {
 
   const logoMap = await fetchStyles();
 
-  tours.forEach(record => {
-    const card = createTourCardElement(record, logoMap); // ← 共通テンプレ使ってる
+  const shuffled = shuffleArray(tours); 
+
+  shuffled.forEach(record => {
+    const card = createTourCardElement(record, logoMap);
     container.appendChild(card);
   });
+}
+
+function shuffleArray(array) {
+  return array
+    .map((value) => ({ value, sort: Math.random() }))
+    .sort((a, b) => a.sort - b.sort)
+    .map(({ value }) => value);
+}
+
+function extractUniqueDestinations(tours) {
+  const all = tours.flatMap(tour => tour.fields.Destination || []);
+  const unique = [...new Set(all)];
+  return encodeURIComponent(unique.join(','));
 }
