@@ -435,6 +435,7 @@ function generatePaginationButtons() {
   }
 }
 
+// [未使用]
 // 検索バーのドロップダウン（Style, Destination, Days）を生成・更新する関数
 function generateSearchDropdowns() {
   const styleSelect = document.getElementById('search-style');
@@ -592,7 +593,6 @@ document.getElementById('search-button').addEventListener('click', () => {
   paginateAndDisplay();
 });
 
-
 // ソートセレクトボックスの変更イベント
 document.getElementById('sort-select').addEventListener('change', async (e) => {
   // 選択された値を分割してソート条件を取得（例: "Name|asc" → field = "Name", direction = "asc"）
@@ -655,57 +655,68 @@ document.getElementById('clear-filters').addEventListener('click', () => {
   applyFilter();
 });
 
-
-
-
-
-
-
+/**
+ * Airtableから取得したレコードとスタイル別ロゴのマップをもとに、
+ * ツアーカードのDOM要素を生成して返す関数。
+ *
+ * @param {Object} record - Airtableの1件分のツアーデータレコード
+ * @param {Object} logoMap - Style IDとロゴURLをマッピングしたオブジェクト
+ * @returns {DocumentFragment} - 複製されたツアーカードのDOMフラグメント
+ */
 function createTourCardElement(record, logoMap) {
   const f = record.fields;
   const template = document.getElementById('tour-card-template');
-  const clone = template.content.cloneNode(true);
-  
-  console.log('f', f);
+  const clone = template.content.cloneNode(true); // テンプレートを複製
 
-  // 画像
+  console.log('f', f); // デバッグ用：レコード内容を確認
+
+  // -----------------------------
+  // メイン画像の設定
+  // -----------------------------
   const images = f.Images || [];
   const imageUrl = (Array.isArray(images) && images.length > 0)
     ? images[0].thumbnails?.full?.url || images[0].url
     : '';
   const imageEl = clone.querySelector('.tour-image');
   if (imageUrl && imageEl) imageEl.src = imageUrl;
-  else if (imageEl) imageEl.remove();
+  else if (imageEl) imageEl.remove(); // 画像がなければ要素を削除
 
-  // ロゴ
-  /*
-  const tourLogos = f["Tour Logo"] || [];
-  const logoUrl = (Array.isArray(tourLogos) && tourLogos.length > 0)
-    ? tourLogos[0].thumbnails?.full?.url || tourLogos[0].url
-    : '';
-  */
+  // -----------------------------
+  // ロゴ画像の設定（Style参照）
+  // -----------------------------
   const styleId = f["Style"]?.[0];
   const logoUrl = logoMap[styleId] || '';
-
   const logoEl = clone.querySelector('.tour-logo');
   if (logoUrl && logoEl) logoEl.src = logoUrl;
-  else if (logoEl) logoEl.remove();
+  else if (logoEl) logoEl.remove(); // ロゴがなければ要素を削除
 
+  // -----------------------------
+  // ツアータイトル・スタイル名
+  // -----------------------------
   clone.querySelector('.tour-title').textContent = f.Name || '';
-  clone.querySelector('.tour-style').textContent = f["Name (from Style)"][0] || '';
+  clone.querySelector('.tour-style').textContent = f["Name (from Style)"]?.[0] || '';
 
+  // -----------------------------
+  // 日付表示（カスタムテキスト優先）
+  // -----------------------------
   const startDate = f["Tour Start Date (from Inquiry)"]?.[0] || f["Start Date"];
   const endDate = f["Tour End Date (from Inquiry)"]?.[0] || f["End Date"];
   const dateText = f["Tour Date Text (from Inquiry)"]?.[0] || '';
   const dateEl = clone.querySelector('.tour-dates');
   if (dateText) {
-    dateEl.textContent = dateText;
+    dateEl.textContent = dateText; // カスタムテキスト優先
   } else {
     dateEl.textContent = `${formatDateVerbose(startDate)} - ${formatDateVerbose(endDate)}`;
   }
 
+  // -----------------------------
+  // ツアー日数表示
+  // -----------------------------
   clone.querySelector('.tour-length').textContent = `${f.Days || ''} DAYS ${f.Nights || ''} NIGHTS`;
 
+  // -----------------------------
+  // 価格表示（テキスト or 数値）
+  // -----------------------------
   const priceText = f["Price Text (from Inquiry)"]?.[0] || '';
   const priceArray = f["Price (Adult) (from Inquiry)"];
   const raw = Array.isArray(priceArray) && priceArray.length > 0 ? priceArray[0] : '';
@@ -716,49 +727,88 @@ function createTourCardElement(record, logoMap) {
   const priceEl = clone.querySelector('.tour-price');
   priceEl.textContent = priceText || `from ${priceFormatted} per person`;
 
+  // -----------------------------
+  // 詳細リンクの設定
+  // -----------------------------
   const linkEl = clone.querySelector('a.btn');
   if (linkEl) linkEl.href = f.URL || '#';
 
-  return clone;
+  return clone; // 完成したDOMノードを返す
 }
 
+/**
+ * ページURLやhiddenフィールドから条件を取得し、
+ * Airtableからツアーデータを取得してカルーセルに表示する関数
+ *
+ * @param {string} containerId - ツアーカードを描画するDOMコンテナのID
+ */
 async function fetchRecommendedTours(containerId) {
   let all = [];
   let offset = null;
   let done = false;
 
   try {
+    // -----------------------------
+    // URLクエリパラメータの取得
+    // -----------------------------
     const urlParams = new URLSearchParams(window.location.search);
     const recordId = urlParams.get('id');
     const recordDestination = urlParams.get('destination');
 
     let encodedDestinations;
-    if(recordId){
+    let encodedKeyword;
+
+    // recordIdがある場合、該当ツアーからDestination情報を抽出
+    if (recordId) {
       const Tour = await fetchTour(recordId);
       encodedDestinations = extractUniqueDestinations(Tour.records);
     }
-    if(recordDestination){
+
+    // destinationクエリパラメータがある場合はそれを利用
+    if (recordDestination) {
       encodedDestinations = recordDestination;
     }
 
-    // Airtableからデータを取得
+    // -----------------------------
+    // hidden inputからの取得
+    // -----------------------------
+    const hiddenDestinationElement = document.getElementById('destination');
+    const hiddenDestination = hiddenDestinationElement ? hiddenDestinationElement.value : null;
+    if (hiddenDestination) {
+      encodedDestinations = encodeURIComponent(hiddenDestination);
+    }
+
+    const hiddenkeywordElement = document.getElementById('keyword');
+    const hiddenkeyword = hiddenkeywordElement ? hiddenkeywordElement.value : null;
+    if (hiddenkeyword) {
+      encodedKeyword = encodeURIComponent(hiddenkeyword);
+    }
+
+    // -----------------------------
+    // Airtableからデータをフェッチ（複数ページに対応）
+    // -----------------------------
     while (!done) {
       let url = `${apiBaseUrl}?table=1`;
-      
-      // ✅ フィルター条件追加 (Recommended=true)
-      if(recordId){
-        url += `&filterField=${encodeURIComponent("ID (from Style)")}&filterValue=1`; // Day Tour
-        url += `&filterField2=${encodeURIComponent("Destination")}&filterValue2=${encodedDestinations}`; // Destination
-      }else if(recordDestination){
-        url += `&filterField2=${encodeURIComponent("Destination")}&filterValue2=${encodeURIComponent(encodedDestinations)}`; // Destination
-      }else{
-        url += `&filterField=Recommended&filterValue=true`;
+
+      // 条件に応じたフィルターパラメータを構築
+      if (recordId) {
+        url += `&filterField=${encodeURIComponent("ID (from Style)")}&filterValue=1`;
+        url += `&filterField2=${encodeURIComponent("Destination")}&filterValue2=${encodedDestinations}`;
+      } else if (recordDestination) {
+        url += `&filterField2=${encodeURIComponent("Destination")}&filterValue2=${encodeURIComponent(encodedDestinations)}`;
+      } else if (hiddenDestination) {
+        url += `&filterField2=${encodeURIComponent("Destination")}&filterValue2=${encodeURIComponent(encodedDestinations)}`;
+      } else if (hiddenkeyword) {
+        url += `&filterField2=${encodeURIComponent("Name")}&filterValue2=${encodeURIComponent(encodedKeyword)}`;
+      } else {
+        url += `&filterField=Recommended&filterValue=true`; // デフォルト：おすすめツアー
       }
 
+      // ページング対応
       if (offset) url += `&offset=${offset}`;
 
+      // API呼び出し
       const res = await fetch(url);
-
       if (!res.ok) {
         const err = await res.text();
         console.error(`API error: ${res.status}\n${err}`);
@@ -766,28 +816,36 @@ async function fetchRecommendedTours(containerId) {
       }
 
       const data = await res.json();
-
       if (!data.records) {
         console.error("Invalid format received from Airtable");
         return;
       }
 
+      // データを蓄積し、次ページのためのoffset取得
       all.push(...data.records);
       offset = data.offset;
-      done = !offset;
+      done = !offset; // offsetが存在しない＝最後のページ
     }
 
-    // カルーセルにツアーカードを描画
+    // -----------------------------
+    // ツアーカードの描画
+    // -----------------------------
     renderRecommendedCarousel(all, containerId);
   } catch (e) {
     console.error("Failed to fetch data:", e);
   }
 }
 
+/**
+ * Airtable の Style テーブル（table=2）からスタイルIDとロゴ画像のマッピングを取得する関数
+ * @returns {Promise<Object>} スタイルIDをキー、ロゴ画像URLを値とするマップ（例: { "recXXXX": "https://..." }）
+ */
 async function fetchStyles() {
   try {
+    // Airtable API の URL を生成（table=2 は Style テーブルを指す）
     let url = `${apiBaseUrl}?table=2`;
 
+    // データを取得
     const res = await fetch(url);
     if (!res.ok) {
       const err = await res.text();
@@ -795,14 +853,18 @@ async function fetchStyles() {
       return;
     }
 
+    // JSON に変換
     const data = await res.json();
 
+    // 結果を格納するマップ（key: record ID, value: logo URL）
     const logoMap = {};
 
+    // 各レコードをループしてロゴ画像のURLを抽出
     data.records.forEach(record => {
       const id = record.id;
       const logoArray = record.fields.Logo;
 
+      // ロゴが配列として存在し、少なくとも1つある場合
       if (Array.isArray(logoArray) && logoArray.length > 0) {
         const fullThumb = logoArray[0]?.thumbnails?.full?.url;
         if (fullThumb) {
@@ -817,11 +879,20 @@ async function fetchStyles() {
   }
 }
 
+/**
+ * 指定されたレコードIDに一致するツアー情報を Airtable の Tour テーブル（table=1）から取得する関数
+ * @param {string} recordId - Airtable のレコードID（例: "recXXXXXXXXXXXXX"）
+ * @returns {Promise<Object>} ツアーデータオブジェクト（例: { records: [...] }）
+ */
 async function fetchTour(recordId) {
   try {
+    // Airtable API のエンドポイント（Tour テーブル: table=1）
     let url = `${apiBaseUrl}?table=1`;
+
+    // RECORD_ID() を使用したフィルターを追加
     url += `&filterField=RECORD_ID()&filterValue=${recordId}`;
 
+    // データ取得
     const res = await fetch(url);
     if (!res.ok) {
       const err = await res.text();
@@ -829,6 +900,7 @@ async function fetchTour(recordId) {
       return;
     }
 
+    // JSON に変換して返す
     const data = await res.json();
     return data;
   } catch (e) {
@@ -836,29 +908,45 @@ async function fetchTour(recordId) {
   }
 }
 
+/**
+ * おすすめツアーをランダムな順番でカルーセル要素に描画する関数
+ * @param {Array} tours - Airtableから取得したツアーの配列
+ * @param {string} containerId - ツアーカードを描画する対象HTML要素のID
+ */
 async function renderRecommendedCarousel(tours, containerId) {
   const container = document.getElementById(containerId);
-  container.innerHTML = '';
+  container.innerHTML = ''; // 既存の内容をクリア
 
-  const logoMap = await fetchStyles();
+  const logoMap = await fetchStyles(); // スタイルIDとロゴ画像URLのマップを取得
 
-  const shuffled = shuffleArray(tours); 
+  const shuffled = shuffleArray(tours); // ツアーをランダムに並び替え
 
   shuffled.forEach(record => {
-    const card = createTourCardElement(record, logoMap);
-    container.appendChild(card);
+    const card = createTourCardElement(record, logoMap); // 各ツアーのカード要素を作成
+    container.appendChild(card); // カードをカルーセルに追加
   });
 }
 
+/**
+ * 配列の要素をランダムにシャッフルする関数（Fisher-Yates風）
+ * @param {Array} array - シャッフル対象の配列
+ * @returns {Array} シャッフルされた配列
+ */
 function shuffleArray(array) {
   return array
-    .map((value) => ({ value, sort: Math.random() }))
-    .sort((a, b) => a.sort - b.sort)
-    .map(({ value }) => value);
+    .map((value) => ({ value, sort: Math.random() })) // 各要素にランダムなソートキーを付与
+    .sort((a, b) => a.sort - b.sort)                  // ソートキーで並び替え
+    .map(({ value }) => value);                       // 元の値だけ取り出して返却
 }
 
+/**
+ * ツアーデータから一意なDestination（目的地）一覧を抽出して、
+ * カンマ区切りでまとめ、URLエンコードされた文字列として返す
+ * @param {Array} tours - Airtableのツアーレコード配列
+ * @returns {string} encodeURIComponentされた "Tokyo,Kyoto,Nara" のような文字列
+ */
 function extractUniqueDestinations(tours) {
-  const all = tours.flatMap(tour => tour.fields.Destination || []);
-  const unique = [...new Set(all)];
-  return encodeURIComponent(unique.join(','));
+  const all = tours.flatMap(tour => tour.fields.Destination || []); // すべてのDestinationをまとめる
+  const unique = [...new Set(all)]; // 重複を排除して一意にする
+  return encodeURIComponent(unique.join(',')); // カンマ区切りで結合し、URLエンコードして返す
 }
