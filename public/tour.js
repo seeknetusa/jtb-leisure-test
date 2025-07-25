@@ -736,17 +736,26 @@ function createTourCardElement(record, logoMap) {
   if (linkEl) {
     const pdfArray = f.PDF;
     const pdfUrl = Array.isArray(pdfArray) && pdfArray.length > 0 ? pdfArray[0].url : '';
+    const isExternal = !!(f.URL || pdfUrl); // 外部リンク判定
     const href = f.URL || pdfUrl || `?id=${record.id}`;
 
-    const hasLink = f.URL || pdfUrl;
-
-    const icon = hasLink
+    // アイコン画像（赤と白）を外部／内部リンクで切り替え
+    const redIcon = isExternal
       ? 'https://cdn.prod.website-files.com/6865cdc559f013614975d0bc/687fe53ee93aa36b8503d408_arrow-up-right-from-square-regular-full-red.svg'
       : 'https://cdn.prod.website-files.com/6865cdc559f013614975d0bc/687fe4d5ddfd614d8bec3764_arrow-right-regular-full-red.svg';
 
+    const whiteIcon = isExternal
+      ? 'https://cdn.prod.website-files.com/6865cdc559f013614975d0bc/6882d379e9ce953474fff05f_arrow-up-right-from-square-regular-full-white.svg'
+      : 'https://cdn.prod.website-files.com/6865cdc559f013614975d0bc/6882d37975de70d79974a06c_arrow-right-regular-full-white.svg';
+
     linkEl.href = href;
-    linkEl.innerHTML = `View Itinerary <span><img src="${icon}" alt=""></span>`;
+    linkEl.innerHTML = `
+      View Itinerary
+      <span class="red"><img src="${redIcon}" alt=""></span>
+      <span class="white"><img src="${whiteIcon}" alt=""></span>
+    `;
   }
+
 
   return clone; // 完成したDOMノードを返す
 }
