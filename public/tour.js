@@ -749,6 +749,16 @@ function createTourCardElement(record, logoMap) {
       : 'https://cdn.prod.website-files.com/6865cdc559f013614975d0bc/6882d37975de70d79974a06c_arrow-right-regular-full-white.svg';
 
     linkEl.href = href;
+
+    // target属性を明示的に初期化
+    if (isExternal) {
+      linkEl.target = "_blank";
+      linkEl.rel = "noopener noreferrer"; // セキュリティ対策として追加推奨
+    } else {
+      linkEl.removeAttribute('target'); // 明示的に削除
+      linkEl.removeAttribute('rel');
+    }
+
     linkEl.innerHTML = `
       View Itinerary
       <span class="red"><img src="${redIcon}" alt=""></span>
