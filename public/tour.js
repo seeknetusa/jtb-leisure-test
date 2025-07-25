@@ -691,10 +691,14 @@ function createTourCardElement(record, logoMap) {
   else if (logoEl) logoEl.remove(); // ロゴがなければ要素を削除
 
   // -----------------------------
-  // ツアータイトル・スタイル名
+  // ツアータイトル・スタイル名（番号除去）
   // -----------------------------
   clone.querySelector('.tour-title').textContent = f.Name || '';
-  clone.querySelector('.tour-style').textContent = f["Name (from Style)"]?.[0] || '';
+
+  // "1. Something" → "Something" に変換
+  const rawStyleName = f["Name (from Style)"]?.[0] || '';
+  const cleanedStyleName = rawStyleName.replace(/^\d+\.\s*/, '');
+  clone.querySelector('.tour-style').textContent = cleanedStyleName;
 
   // -----------------------------
   // 日付表示（カスタムテキスト優先）
