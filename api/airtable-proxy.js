@@ -55,6 +55,7 @@ export default async function handler(req, res) {
     const values = decodeURIComponent(filterValue).split(',').map(v => v.trim());
 
     console.log('values', values);
+    console.log('filterValue', filterValue);
 
     if (filterField === 'RECORD_ID()') {
       if (values.length > 1) {

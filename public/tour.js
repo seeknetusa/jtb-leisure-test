@@ -573,87 +573,96 @@ function generateSearchDropdowns() {
 }
 
 // 検索ボタンのクリックイベント
-document.getElementById('search-button').addEventListener('click', () => {
-  // 検索条件の取得
-  const keyword = document.getElementById('search-keyword').value.trim().toLowerCase();
+const button = document.getElementById('search-button');
+if (button) {
+  button.addEventListener('click', () => {
+    // 検索条件の取得
+    const keyword = document.getElementById('search-keyword').value.trim().toLowerCase();
 
-  // データのフィルタリング
-  filteredData = allData.filter(record => {
-    const name = (record.fields.Name || '').toLowerCase();
-	
-    // キーワード検索（Nameフィールド）
-    const keywordMatch = !keyword || name.includes(keyword);
+    // データのフィルタリング
+    filteredData = allData.filter(record => {
+      const name = (record.fields.Name || '').toLowerCase();
+    
+      // キーワード検索（Nameフィールド）
+      const keywordMatch = !keyword || name.includes(keyword);
 
-    return keywordMatch;
-  });
-
-  // ページ番号を初期化し、再描画
-  currentPage = 1;
-  generateFilters();
-  paginateAndDisplay();
-});
-
-// ソートセレクトボックスの変更イベント
-document.getElementById('sort-select').addEventListener('change', async (e) => {
-  // 選択された値を分割してソート条件を取得（例: "Name|asc" → field = "Name", direction = "asc"）
-  const [field, direction] = e.target.value.split('|');
-  currentSortField = field;
-  currentSortDirection = direction;
-
-  // ページ番号を初期化
-  currentPage = 1;
-
-  // データの再取得（UIの再描画は行わない）
-  await fetchAndStoreData(false);
-
-  // ★ フィルターを再適用（UIの選択状態を維持するため）
-  applyFilter();
-});
-
-// 「すべてクリア」ボタンがクリックされたときの処理
-document.getElementById('clear-filters').addEventListener('click', () => {
-
-  // ✅ チェックボックス（Style, Interest, Destination）をすべてオフにする
-  document.querySelectorAll('#filter-style input, #filter-interest input, #filter-destination input')
-    .forEach(el => {
-      el.checked = false;
+      return keywordMatch;
     });
 
-  // ✅ Trip Length（Days）のmin/maxを全データから再計算
-  const dayValues = allData
-    .map(r => r.fields.Days)
-    .filter(v => typeof v === 'number' && !isNaN(v));
+    // ページ番号を初期化し、再描画
+    currentPage = 1;
+    generateFilters();
+    paginateAndDisplay();
+  });
+}
 
-  if (dayValues.length > 0) {
-    const newMin = Math.min(...dayValues);
-    const newMax = Math.max(...dayValues);
+// ソートセレクトボックスの変更イベント
+const sort = document.getElementById('sort-select');
+if (sort) {
+  sort.addEventListener('change', async (e) => {
+    // 選択された値を分割してソート条件を取得（例: "Name|asc" → field = "Name", direction = "asc"）
+    const [field, direction] = e.target.value.split('|');
+    currentSortField = field;
+    currentSortDirection = direction;
 
-    const tripSlider = document.getElementById('trip-length-slider');
-    if (tripSlider && tripSlider.noUiSlider) {
+    // ページ番号を初期化
+    currentPage = 1;
 
-      // スライダーのレンジ更新
-      tripSlider.noUiSlider.updateOptions({
-        range: {
-          min: newMin,
-          max: newMax
-        }
+    // データの再取得（UIの再描画は行わない）
+    await fetchAndStoreData(false);
+
+    // ★ フィルターを再適用（UIの選択状態を維持するため）
+    applyFilter();
+  });
+}
+
+// 「すべてクリア」ボタンがクリックされたときの処理
+const clear = document.getElementById('clear-filters');
+if (clear) {
+  clear.addEventListener('click', () => {
+
+    // ✅ チェックボックス（Style, Interest, Destination）をすべてオフにする
+    document.querySelectorAll('#filter-style input, #filter-interest input, #filter-destination input')
+      .forEach(el => {
+        el.checked = false;
       });
 
-      // スライダーのつまみ位置を初期位置に戻す
-      tripSlider.noUiSlider.set([newMin, newMax]);
+    // ✅ Trip Length（Days）のmin/maxを全データから再計算
+    const dayValues = allData
+      .map(r => r.fields.Days)
+      .filter(v => typeof v === 'number' && !isNaN(v));
 
-      // 表示テキストも更新
-      document.getElementById('trip-length-min').textContent = `${newMin} day`;
-      document.getElementById('trip-length-max').textContent = `${newMax} day`;
+    if (dayValues.length > 0) {
+      const newMin = Math.min(...dayValues);
+      const newMax = Math.max(...dayValues);
+
+      const tripSlider = document.getElementById('trip-length-slider');
+      if (tripSlider && tripSlider.noUiSlider) {
+
+        // スライダーのレンジ更新
+        tripSlider.noUiSlider.updateOptions({
+          range: {
+            min: newMin,
+            max: newMax
+          }
+        });
+
+        // スライダーのつまみ位置を初期位置に戻す
+        tripSlider.noUiSlider.set([newMin, newMax]);
+
+        // 表示テキストも更新
+        document.getElementById('trip-length-min').textContent = `${newMin} day`;
+        document.getElementById('trip-length-max').textContent = `${newMax} day`;
+      }
     }
-  }
 
-  // ✅ 検索フォームも初期化
-  document.getElementById('search-keyword').value = '';
-  
-  // ✅ フィルターを再適用
-  applyFilter();
-});
+    // ✅ 検索フォームも初期化
+    document.getElementById('search-keyword').value = '';
+    
+    // ✅ フィルターを再適用
+    applyFilter();
+  });
+}
 
 /**
  * Airtableから取得したレコードとスタイル別ロゴのマップをもとに、
@@ -964,6 +973,155 @@ async function renderRecommendedCarousel(tours, containerId) {
     container.appendChild(card); // カードをカルーセルに追加
   });
 }
+
+async function renderTourDetail(recordId) {
+  // recordIdがある場合、該当ツアーからDestination情報を抽出
+  if (recordId) {
+    const Tour = await fetchTour(recordId);
+    console.log('Tour', Tour);
+    
+    const fields = Tour?.records?.[0]?.fields;
+    if (!fields) return;
+
+    // ① タイトルを <h1> にセット
+    const titleElement = document.querySelector(".tour-header h1");
+    if (titleElement && fields.Name) {
+      titleElement.textContent = fields.Name;
+    }
+
+    // ★ Name (from Style) を pill にセット
+    const pillContainer = document.querySelector(".tour-tags .pill");
+    if (pillContainer && fields["Name (from Style)"]?.length > 0) {
+      pillContainer.textContent = fields["Name (from Style)"][0];
+    }
+
+    const heroImagesContainer = document.querySelector(".hero-images");
+    if (heroImagesContainer && fields.Images?.length > 0) {
+      heroImagesContainer.innerHTML = ""; // 既存のimgをクリア
+
+      fields.Images.forEach(image => {
+        const url = image.thumbnails?.full?.url || image.url;
+        const alt = image.filename.replace(/\.[^/.]+$/, ""); // 拡張子を除く
+        const img = document.createElement("img");
+        img.src = url;
+        img.alt = alt;
+        heroImagesContainer.appendChild(img);
+      });
+    }
+
+    const highlightsSection = document.querySelector(".tour-highlights");
+    if (highlightsSection) {
+      // --- ULリストに Highlights をセット ---
+      const ul = highlightsSection.querySelector("ul");
+      if (ul && fields.Highlights) {
+        // 改行で分割 → <li>要素として追加
+        const lines = fields.Highlights.split(/\r?\n/).filter(line => line.trim() !== "");
+        ul.innerHTML = lines.map(item => `<li>${item}</li>`).join("");
+      }
+
+      // --- 説明文を <div> に挿入 ---
+      const descriptionDiv = highlightsSection.querySelector("div");
+      if (descriptionDiv && fields["Highlights - Description"]) {
+        descriptionDiv.textContent = fields["Highlights - Description"].replace(/\\\*/g, "*");
+      }
+
+      // --- 地図画像を <img> に挿入 ---
+      const mapImg = highlightsSection.querySelector("img");
+      if (mapImg && fields["Highlights - Image"]?.length > 0) {
+        const imgObj = fields["Highlights - Image"][0];
+        mapImg.src = imgObj.thumbnails?.full?.url || imgObj.url;
+        mapImg.alt = imgObj.filename.replace(/\.[^/.]+$/, "");
+      }
+    }
+
+
+
+
+
+    const descIds = fields.Description; // ← Linked record フィールド名
+    if (Array.isArray(descIds) && descIds.length > 0) {
+      await renderTourDescriptions(descIds);
+    }
+
+
+
+
+
+
+  }
+}
+
+
+
+async function fetchDescriptionBlocks(descriptionIds) {
+  const filter = `OR(${descriptionIds.map(id => `RECORD_ID()='${id}'`).join(",")})`;
+  const url = `${apiBaseUrl}?table=3&filterByFormula=${encodeURIComponent(filter)}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    console.error("Failed to fetch descriptions");
+    return [];
+  }
+  const data = await res.json();
+
+  // ID順に並べ替える
+  return data.records.sort(
+    (a, b) => descriptionIds.indexOf(a.id) - descriptionIds.indexOf(b.id)
+  );
+}
+
+async function renderTourDescriptions(descriptionIds) {
+  const blocks = await fetchDescriptionBlocks(descriptionIds);
+  const descSection = document.querySelector(".description-section");
+  if (!descSection) return;
+
+  descSection.innerHTML = "";
+
+  blocks.forEach(record => {
+    const fields = record.fields;
+    const block = document.createElement("div");
+    block.className = "description-block";
+
+    const h2 = document.createElement("h2");
+    h2.textContent = fields.Name || "";
+    block.appendChild(h2);
+
+    const content = fields.Content || "";
+    const paragraphs = content
+      .split(/\r?\n/)
+      .filter(line => line.trim())
+      .map(text => {
+        const p = document.createElement("p");
+        p.textContent = text.replace(/\\\*/g, "*");
+        return p;
+      });
+
+    const imageObj = fields.Image?.[0];
+    const hasImage = imageObj?.thumbnails?.full?.url || imageObj?.url;
+
+    if (hasImage) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "image-text";
+
+      const img = document.createElement("img");
+      img.src = imageObj.thumbnails.full.url || imageObj.url;
+      img.alt = imageObj.filename.replace(/\.[^/.]+$/, "");
+
+      const textDiv = document.createElement("div");
+      paragraphs.forEach(p => textDiv.appendChild(p));
+
+      wrapper.appendChild(img);
+      wrapper.appendChild(textDiv);
+      block.appendChild(wrapper);
+    } else {
+      paragraphs.forEach(p => block.appendChild(p));
+    }
+
+    descSection.appendChild(block);
+  });
+}
+
+
+
 
 /**
  * 配列の要素をランダムにシャッフルする関数（Fisher-Yates風）
