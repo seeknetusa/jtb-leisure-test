@@ -50,6 +50,8 @@ export default async function handler(req, res) {
     formulas.push(`{Publish}=TRUE()`);
   }
   
+  console.log('tableName2', tableName);
+
   // filterField 1
   if (filterField && filterValue !== undefined) {
     const values = decodeURIComponent(filterValue).split(',').map(v => v.trim());
