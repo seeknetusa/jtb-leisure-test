@@ -52,16 +52,20 @@ export default async function handler(req, res) {
   
   // filterField 1
   if (filterField && filterValue !== undefined) {
+    const values = decodeURIComponent(filterValue).split(',').map(v => v.trim());
+
     if (filterField === 'RECORD_ID()') {
-      formulas.push(`RECORD_ID()="${filterValue}"`);
+      if (values.length > 1) {
+        const conditions = values.map(id => `RECORD_ID()="${id}"`);
+        formulas.push(`OR(${conditions.join(',')})`);
+      } else {
+        formulas.push(`RECORD_ID()="${values[0]}"`);
+      }
     } else if (filterValue === 'true') {
       formulas.push(`{${filterField}}=TRUE()`);
     } else if (filterValue === 'false') {
       formulas.push(`{${filterField}}=FALSE()`);
     } else {
-      // カンマ区切りなら OR 条件で部分一致（例：Destination=Tokyo,Osaka）
-      const values = decodeURIComponent(filterValue).split(',').map(v => v.trim());
-
       if (values.length > 1) {
         const subFormulas = values.map(val => `FIND("${val}", ARRAYJOIN({${filterField}}))`);
         formulas.push(`OR(${subFormulas.join(',')})`);
@@ -71,12 +75,19 @@ export default async function handler(req, res) {
         formulas.push(`FIND("${values[0]}", ARRAYJOIN({${filterField}}))`);
       }
     }
-  } 
+  }
 
   // filterField 2（必要なら）
   if (filterField2 && filterValue2 !== undefined) {
+    const values2 = decodeURIComponent(filterValue2).split(',').map(v => v.trim());
+
     if (filterField2 === 'RECORD_ID()') {
-      formulas.push(`RECORD_ID()="${filterValue2}"`);
+      if (values2.length > 1) {
+        const conditions2 = values2.map(id => `RECORD_ID()="${id}"`);
+        formulas.push(`OR(${conditions2.join(',')})`);
+      } else {
+        formulas.push(`RECORD_ID()="${values2[0]}"`);
+      }
     } else if (filterValue2 === 'true') {
       formulas.push(`{${filterField2}}=TRUE()`);
     } else if (filterValue2 === 'false') {
