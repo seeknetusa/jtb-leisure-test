@@ -51,6 +51,8 @@ export default async function handler(req, res) {
   }
   
   console.log('tableName2', tableName);
+  console.log('filterField2', filterField);
+  console.log('filterValue2', filterValue);
 
   // filterField 1
   if (filterField && filterValue !== undefined) {
