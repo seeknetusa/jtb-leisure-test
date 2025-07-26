@@ -54,6 +54,7 @@ export default async function handler(req, res) {
   if (filterField && filterValue !== undefined) {
     const values = decodeURIComponent(filterValue).split(',').map(v => v.trim());
 
+    console.log('tableName', tableName);
     console.log('values', values);
     console.log('filterValue', filterValue);
 

@@ -1040,6 +1040,8 @@ async function renderTourDetail(recordId) {
 
     const descIds = fields.Description; // ← Linked record フィールド名
     if (Array.isArray(descIds) && descIds.length > 0) {
+      console.log('descIds', descIds);
+
       await renderTourDescriptions(descIds);
     }
 
