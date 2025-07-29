@@ -679,6 +679,24 @@ function createTourCardElement(record, logoMap) {
 
   console.log('f', f); // デバッグ用：レコード内容を確認
 
+  const newLabel = document.querySelector(".new-label");
+  if (newLabel) {
+    if (f["New"] === true) {
+      newLabel.style.display = "block"; // または "inline-block"
+    } else {
+      newLabel.style.display = "none";
+    }
+  }
+
+  const campLabel = document.querySelector(".camp-label");
+  if (campLabel) {
+    if (f["Campaign"] === true) {
+      campLabel.style.display = "block"; // または "inline-block"
+    } else {
+      campLabel.style.display = "none";
+    }
+  }
+
   // -----------------------------
   // メイン画像の設定
   // -----------------------------
@@ -1053,11 +1071,9 @@ async function renderTourDetail(recordId) {
   }
 }
 
-
-
 async function fetchDescriptionBlocks(descriptionIds) {
-  const filter = `OR(${descriptionIds.map(id => `RECORD_ID()='${id}'`).join(",")})`;
-  const url = `${apiBaseUrl}?table=3&filterByFormula=${encodeURIComponent(filter)}`;
+  const url = `${apiBaseUrl}?table=3&filterField=RECORD_ID()&filterValue=${descriptionIds.join(",")}`;
+
   const res = await fetch(url);
   if (!res.ok) {
     console.error("Failed to fetch descriptions");
