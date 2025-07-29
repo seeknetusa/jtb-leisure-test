@@ -682,7 +682,7 @@ function createTourCardElement(record, logoMap) {
   const newLabel = clone.querySelector(".new-label");
   if (newLabel) {
     if (f["New"] === true) {
-      newLabel.style.display = "block"; // または "inline-block"
+      newLabel.style.display = "block";
     } else {
       newLabel.style.display = "none";
     }
@@ -691,7 +691,7 @@ function createTourCardElement(record, logoMap) {
   const campLabel = clone.querySelector(".camp-label");
   if (campLabel) {
     if (f["Campaign"] === true) {
-      campLabel.style.display = "block"; // または "inline-block"
+      campLabel.style.display = "block";
     } else {
       campLabel.style.display = "none";
     }
@@ -797,7 +797,6 @@ function createTourCardElement(record, logoMap) {
     `;
   }
 
-
   return clone; // 完成したDOMノードを返す
 }
 
@@ -896,6 +895,9 @@ async function fetchRecommendedTours(containerId) {
     // ツアーカードの描画
     // -----------------------------
     renderRecommendedCarousel(all, containerId);
+
+    // ★ 描画が終わったら自動ループ開始
+    setupReverseLoopScroll(containerId, 4, 3000);
   } catch (e) {
     console.error("Failed to fetch data:", e);
   }
@@ -1163,4 +1165,66 @@ function extractUniqueDestinations(tours) {
   const all = tours.flatMap(tour => tour.fields.Destination || []); // すべてのDestinationをまとめる
   const unique = [...new Set(all)]; // 重複を排除して一意にする
   return encodeURIComponent(unique.join(',')); // カンマ区切りで結合し、URLエンコードして返す
+}
+
+// ============================
+//  右方向の無限ループスクロール
+// ============================
+function setupReverseLoopScroll(carouselId, visibleCount = 4, interval = 3000) {
+  const carousel = document.getElementById(carouselId);
+  if (!carousel) return;
+
+  // 既存のオートスクロールがあれば止める（再初期化対策）
+  if (carousel._autoScrollTimer) {
+    clearInterval(carousel._autoScrollTimer);
+    carousel._autoScrollTimer = null;
+  }
+
+  function getCardWidth() {
+    const firstCard = carousel.querySelector('.tour-card');
+    if (firstCard) {
+      const style = window.getComputedStyle(firstCard);
+      const width = firstCard.offsetWidth;
+      const ml = parseInt(style.marginLeft || 0);
+      const mr = parseInt(style.marginRight || 0);
+      return width + ml + mr;
+    }
+    return 250; // フォールバック
+  }
+
+  const cardWidth = getCardWidth();
+  if (!cardWidth || cardWidth <= 0) return;
+
+  // 初期整列：末尾→先頭に visibleCount 個 prepend
+  for (let i = 0; i < visibleCount; i++) {
+    const last = carousel.lastElementChild;
+    if (last) carousel.prepend(last);
+  }
+
+  // 初期位置を調整
+  carousel.scrollLeft = cardWidth * visibleCount;
+
+  // 自動スクロール本体（右方向ループ）
+  const tick = () => {
+    carousel.scrollBy({ left: -cardWidth, behavior: 'smooth' });
+
+    // スクロールアニメ後に末尾→先頭＆位置補正
+    // アニメ時間は CSS/ブラウザにより異なるので余裕を持って 500ms
+    setTimeout(() => {
+      const last = carousel.lastElementChild;
+      if (last) {
+        carousel.prepend(last);
+        carousel.scrollLeft += cardWidth; // 目に見えない補正
+      }
+    }, 500);
+  };
+
+  carousel._autoScrollTimer = setInterval(tick, interval);
+
+  // あると便利：ホバーで一時停止/復帰
+  const pause = () => carousel._autoScrollTimer && clearInterval(carousel._autoScrollTimer);
+  const resume = () => !carousel._autoScrollTimer && (carousel._autoScrollTimer = setInterval(tick, interval));
+
+  carousel.addEventListener('mouseenter', pause);
+  carousel.addEventListener('mouseleave', resume);
 }
