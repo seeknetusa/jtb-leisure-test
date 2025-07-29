@@ -681,16 +681,17 @@ function createTourCardElement(record, logoMap) {
 
   const newLabel = document.querySelector(".new-label");
   if (newLabel) {
-    if (f["New"] === true) {
-      newLabel.style.display = "block"; // または "inline-block"
+    if (f["New"]) {
+      newLabel.style.display = "block"; // 表示
     } else {
-      newLabel.style.display = "none";
+      newLabel.style.display = "none"; // 非表示
     }
   }
+  
 
   const campLabel = document.querySelector(".camp-label");
   if (campLabel) {
-    if (f["Campaign"] === true) {
+    if (f["Campaign"]) {
       campLabel.style.display = "block"; // または "inline-block"
     } else {
       campLabel.style.display = "none";
