@@ -1174,57 +1174,234 @@ function setupReverseLoopScroll(carouselId, visibleCount = 4, interval = 3000) {
   const carousel = document.getElementById(carouselId);
   if (!carousel) return;
 
-  // 既存のオートスクロールがあれば止める（再初期化対策）
+  // ---- 再初期化対策 ----
+  if (carousel._autoScrollTimer) {
+    clearInterval(carousel._autoScrollTimer);
+    carousel._autoScrollTimer = null;
+  }
+  let restartTimer = null;   // 手動操作後の自動再開用
+  let isAnimating = false;   // 二重実行防止
+
+  // ---- 幅計算：隣カードの左座標差（gap/margin込み）----
+  function getCardWidth() {
+    const cards = carousel.querySelectorAll('.tour-card');
+    if (cards.length >= 2) {
+      const a = cards[0].getBoundingClientRect();
+      const b = cards[1].getBoundingClientRect();
+      return Math.round(b.left - a.left);
+    } else if (cards.length === 1) {
+      const card = cards[0];
+      const style = window.getComputedStyle(card);
+      const w = card.getBoundingClientRect().width;
+      const ml = parseFloat(style.marginLeft) || 0;
+      const mr = parseFloat(style.marginRight) || 0;
+      return Math.round(w + ml + mr);
+    }
+    return 250;
+  }
+
+  let cardWidth = getCardWidth();
+  if (!cardWidth || cardWidth <= 0) return;
+
+  // ---- 初期整列（peekなしの土台作り）----
+  for (let i = 0; i < visibleCount; i++) {
+    const last = carousel.lastElementChild;
+    if (last) carousel.prepend(last);
+  }
+  carousel.scrollLeft = cardWidth * visibleCount;
+
+  // ---- 共通ヘルパー ----
+  const animMs = 400; // スクロールのアニメ時間（scrollByのsmooth時間目安）
+
+  function snapToBoundary() {
+    // カード境界(整数倍)にピタッと
+    const n = Math.round(carousel.scrollLeft / cardWidth);
+    carousel.scrollLeft = n * cardWidth;
+  }
+
+  function pauseAuto() {
+    if (carousel._autoScrollTimer) {
+      clearInterval(carousel._autoScrollTimer);
+      carousel._autoScrollTimer = null;
+    }
+    if (restartTimer) {
+      clearTimeout(restartTimer);
+      restartTimer = null;
+    }
+  }
+
+  function resumeAuto(delay = 1200) {
+    if (restartTimer) clearTimeout(restartTimer);
+    restartTimer = setTimeout(() => {
+      if (!carousel._autoScrollTimer) {
+        carousel._autoScrollTimer = setInterval(moveNext, interval);
+      }
+    }, delay);
+  }
+
+  // ---- 1コマ進む（自動／右矢印と同じ動き）----
+  function moveNext() {
+    if (isAnimating) return;
+    isAnimating = true;
+
+    // 左に1コマ分スクロール（見た目は次のカードへ）
+    carousel.scrollBy({ left: -cardWidth, behavior: 'smooth' });
+
+    // アニメ後に末尾→先頭へ移動し、境界をスナップ
+    setTimeout(() => {
+      const last = carousel.lastElementChild;
+      if (last) carousel.prepend(last);
+      snapToBoundary();
+      isAnimating = false;
+    }, animMs);
+  }
+
+  // ---- 1コマ戻る（左矢印の動き）----
+  function movePrev() {
+    if (isAnimating) return;
+    isAnimating = true;
+
+    // 逆方向のループは「先頭を末尾に移動して scrollLeft を補正」→右へスムーススクロール
+    const first = carousel.firstElementChild;
+    if (first) {
+      // 先頭を末尾に送り、表示が変わらないよう scrollLeft を左へ1コマ分ずらす
+      carousel.appendChild(first);
+      carousel.scrollLeft -= cardWidth;
+    }
+
+    // 右に1コマ分スクロール（＝前のカードが表示される）
+    carousel.scrollBy({ left: cardWidth, behavior: 'smooth' });
+
+    setTimeout(() => {
+      snapToBoundary();
+      isAnimating = false;
+    }, animMs);
+  }
+
+  // ---- 自動スクロール開始 ----
+  carousel._autoScrollTimer = setInterval(moveNext, interval);
+
+  // ---- ホバーで一時停止/復帰（任意）----
+  carousel.addEventListener('mouseenter', () => {
+    pauseAuto();
+  });
+  carousel.addEventListener('mouseleave', () => {
+    resumeAuto();
+  });
+
+  // ---- 矢印ボタンを接続（IDはあなたのHTMLに合わせて）----
+  const leftBtn  = document.getElementById('carousel-left');
+  const rightBtn = document.getElementById('carousel-right');
+
+  if (leftBtn) {
+    leftBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      pauseAuto();
+      movePrev();
+      resumeAuto();
+    });
+  }
+  if (rightBtn) {
+    rightBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      pauseAuto();
+      moveNext();
+      resumeAuto();
+    });
+  }
+
+  // ---- リサイズ時：幅再計測＆境界スナップ（peek再発防止）----
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      cardWidth = getCardWidth();
+      if (cardWidth > 0) {
+        snapToBoundary();
+      }
+    }, 150);
+  });
+}
+
+/*
+function setupReverseLoopScroll(carouselId, visibleCount = 4, interval = 3000) {
+  const carousel = document.getElementById(carouselId);
+  if (!carousel) return;
+
+  // 二重起動対策（再初期化時）
   if (carousel._autoScrollTimer) {
     clearInterval(carousel._autoScrollTimer);
     carousel._autoScrollTimer = null;
   }
 
+  // 1コマの“実効幅”を取得（margin/gapも含めた隣カードの左座標差）
   function getCardWidth() {
-    const firstCard = carousel.querySelector('.tour-card');
-    if (firstCard) {
-      const style = window.getComputedStyle(firstCard);
-      const width = firstCard.offsetWidth;
-      const ml = parseInt(style.marginLeft || 0);
-      const mr = parseInt(style.marginRight || 0);
-      return width + ml + mr;
+    const cards = carousel.querySelectorAll('.tour-card');
+    if (cards.length >= 2) {
+      const a = cards[0].getBoundingClientRect();
+      const b = cards[1].getBoundingClientRect();
+      return Math.round(b.left - a.left);
+    } else if (cards.length === 1) {
+      const card = cards[0];
+      const style = window.getComputedStyle(card);
+      const width = card.getBoundingClientRect().width;
+      const ml = parseFloat(style.marginLeft) || 0;
+      const mr = parseFloat(style.marginRight) || 0;
+      return Math.round(width + ml + mr);
     }
-    return 250; // フォールバック
+    return 250; // fallback
   }
 
   const cardWidth = getCardWidth();
   if (!cardWidth || cardWidth <= 0) return;
 
-  // 初期整列：末尾→先頭に visibleCount 個 prepend
+  // --- 初期整列：常に「カード境界」に合わせる（peekなし）
+  // 末尾→先頭に visibleCount 個 prepend（右ループの土台）
   for (let i = 0; i < visibleCount; i++) {
     const last = carousel.lastElementChild;
     if (last) carousel.prepend(last);
   }
-
-  // 初期位置を調整
+  // ちょうど visibleCount コマ分だけ右に寄せる（境界にスナップ）
   carousel.scrollLeft = cardWidth * visibleCount;
 
-  // 自動スクロール本体（右方向ループ）
+  const animMs = 400; // アニメ時間の目安
+
   const tick = () => {
+    // 1コマ分だけスクロール（カード境界 → 次のカード境界）
     carousel.scrollBy({ left: -cardWidth, behavior: 'smooth' });
 
-    // スクロールアニメ後に末尾→先頭＆位置補正
-    // アニメ時間は CSS/ブラウザにより異なるので余裕を持って 500ms
+    // アニメ後に末尾→先頭へ移動し、境界にスナップ
     setTimeout(() => {
       const last = carousel.lastElementChild;
       if (last) {
         carousel.prepend(last);
-        carousel.scrollLeft += cardWidth; // 目に見えない補正
+        // “整数倍の境界”にぴったり合わせる
+        const n = Math.round(carousel.scrollLeft / cardWidth);
+        carousel.scrollLeft = n * cardWidth;
       }
-    }, 500);
+    }, animMs);
   };
 
+  // 自動スクロール開始
   carousel._autoScrollTimer = setInterval(tick, interval);
 
-  // あると便利：ホバーで一時停止/復帰
+  // ホバーで一時停止/復帰（任意）
   const pause = () => carousel._autoScrollTimer && clearInterval(carousel._autoScrollTimer);
   const resume = () => !carousel._autoScrollTimer && (carousel._autoScrollTimer = setInterval(tick, interval));
-
   carousel.addEventListener('mouseenter', pause);
   carousel.addEventListener('mouseleave', resume);
+
+  // ウィンドウリサイズで幅が変わる場合の再スナップ（任意）
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      const w = getCardWidth();
+      if (w > 0) {
+        const n = Math.round(carousel.scrollLeft / w);
+        carousel.scrollLeft = n * w;
+      }
+    }, 150);
+  });
 }
+*/
