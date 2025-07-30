@@ -1362,38 +1362,72 @@ async function initSmoothTrackCarousel(containerSelector, {
 
 
 
-
-
-
-
-
-
 /**
- * translateX + transition で 1枚ずつスライドする無限カルーセル
- * 既存の setupReverseLoopScroll(containerId, visibleCount, interval) と互換の呼び出しでOK
+ * translateX + transition で 1枚ずつスライドする無限カルーセル（peek防止）
+ * 既存の setupReverseLoopScroll(containerId, visibleCount, interval) と同じ呼び出しでOK
+ *
+ * - 左端の「半分カード」をなくすため、コンテナ幅からカード幅を再計算して
+ *   1画面に visibleCount 枚ピッタリ収まるように flex-basis を強制設定します。
  *
  * @param {string} containerId - 例: "recommended-carousel" または "#recommended-carousel"
- * @param {number} visibleCount - （受け取るだけ。CSS側で幅を決める想定。ここでは1枚分スライド）
+ * @param {number} visibleCount - 1画面に見せる枚数（例：4）
  * @param {number} interval - 自動送り間隔(ms) 例: 4000
- * @param {Object} opts - 省略可: { leftBtn, rightBtn, duration, easing }
+ * @param {Object} opts - 省略可: { leftBtn, rightBtn, duration, easing, gapPx }
  */
 function setupTransformCarousel(containerId, visibleCount = 4, interval = 4000, opts = {}) {
-  // ------- 設定 -------
   const {
     leftBtn  = '#carousel-left',
     rightBtn = '#carousel-right',
-    duration = 500,         // スライド時間(ms) Webflow例に合わせて0.5s
-    easing   = 'ease'
+    duration = 500,
+    easing   = 'ease',
+    gapPx    = null, // null の場合は CSS の gap を読み取る
   } = opts;
 
   const idSel = containerId.startsWith('#') ? containerId : `#${containerId}`;
   const track = document.querySelector(idSel);
   if (!track) return;
 
-  // .tour-card が非同期で追加される前提：監視してから初期化
   const hasCards = () => track.querySelectorAll('.tour-card').length > 0;
 
-  // 1コマ幅（隣カードの left 差で gap/margin ごと測る）
+  // ----- 余白(gap)とカード幅を計算し、peekが出ないようカード幅を強制 -----
+  function normalizeLayout() {
+    // 親：peek防止
+    const csTrack = getComputedStyle(track);
+    track.style.overflow = 'hidden';
+    // 横並び（未設定なら付与）
+    if (csTrack.display !== 'flex') track.style.display = 'flex';
+
+    // gap を決定（オプション優先、なければ CSS の gap / column-gap を使用）
+    let gap = typeof gapPx === 'number' ? gapPx : 0;
+    if (gapPx == null) {
+      const g = parseFloat(csTrack.gap || csTrack.columnGap || '0') || 0;
+      gap = g;
+      // gap 未設定なら、見た目を保つため 16px をデフォルトで付与
+      if (!g) {
+        gap = 16;
+        track.style.gap = `${gap}px`;
+      }
+    }
+
+    // コンテナの内側幅（padding を考慮）
+    const rect = track.getBoundingClientRect();
+    const padL = parseFloat(csTrack.paddingLeft)  || 0;
+    const padR = parseFloat(csTrack.paddingRight) || 0;
+    const innerW = rect.width - padL - padR;
+
+    // 1枚あたりの幅 = (内側幅 - gap*(N-1)) / N
+    const cardW = Math.max(0, (innerW - gap * (visibleCount - 1)) / visibleCount);
+
+    // 各カードに flex-basis を明示指定（margin は 0 に）
+    const cards = track.querySelectorAll('.tour-card');
+    cards.forEach(c => {
+      c.style.flex = `0 0 ${cardW}px`;
+      c.style.margin = '0'; // gap と二重計上しない
+      c.style.boxSizing = 'border-box';
+    });
+  }
+
+  // 1コマ幅：隣カードの left 差で測る（gap込みで安定）
   function getSlideWidth() {
     const items = track.querySelectorAll('.tour-card');
     if (items.length >= 2) {
@@ -1401,7 +1435,7 @@ function setupTransformCarousel(containerId, visibleCount = 4, interval = 4000, 
       const b = items[1].getBoundingClientRect();
       return Math.round(b.left - a.left);
     } else if (items.length === 1) {
-      const c = items[0];
+      const c  = items[0];
       const cs = getComputedStyle(c);
       const w  = c.getBoundingClientRect().width;
       const ml = parseFloat(cs.marginLeft)  || 0;
@@ -1412,20 +1446,24 @@ function setupTransformCarousel(containerId, visibleCount = 4, interval = 4000, 
   }
 
   function setup() {
-    // 親は peek 防止
-    const cs = getComputedStyle(track);
-    if (cs.overflowX !== 'hidden') track.style.overflowX = 'hidden';
+    // まずレイアウトを正規化して「1画面に N 枚」ピッタリにする
+    normalizeLayout();
+
+    // スライド初期状態
     track.style.willChange = 'transform';
     track.style.transform  = 'translateX(0)';
 
     let slideW = getSlideWidth();
     if (!slideW || slideW <= 0) {
-      // 画像未ロードなどで0になった場合の簡易リトライ
-      setTimeout(() => { slideW = getSlideWidth(); }, 50);
+      // 画像未ロード等で 0 になる場合の簡易リトライ
+      setTimeout(() => {
+        normalizeLayout();
+        slideW = getSlideWidth();
+      }, 50);
     }
 
-    let busy = false;     // 二重実行防止
-    let autoTimer = null; // 自動送り
+    let busy = false;
+    let autoTimer = null;
 
     function slideNext() {
       if (busy) return;
@@ -1454,7 +1492,6 @@ function setupTransformCarousel(containerId, visibleCount = 4, interval = 4000, 
       if (last) track.insertBefore(last, track.children[0]);
       track.style.transform = `translateX(-${slideW}px)`;
 
-      // ダブルrAFでレイアウト確定後にアニメ適用
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           track.style.transition = `transform ${duration}ms ${easing}`;
@@ -1501,20 +1538,21 @@ function setupTransformCarousel(containerId, visibleCount = 4, interval = 4000, 
     track.addEventListener('mouseenter', stopAuto);
     track.addEventListener('mouseleave', startAuto);
 
-    // リサイズ時：位置リセット＆幅再計測
+    // リサイズ時：レイアウト再正規化 → 幅再計測
     let resizeTimer;
     window.addEventListener('resize', () => {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
         track.style.transition = 'none';
         track.style.transform  = 'translateX(0)';
+
+        normalizeLayout();
         const w = getSlideWidth();
         if (w && w > 0) slideW = w;
       }, 120);
     });
   }
 
-  // すでにカードがあるなら即セットアップ、なければ監視してから
   if (hasCards()) {
     setup();
   } else {
@@ -1527,6 +1565,10 @@ function setupTransformCarousel(containerId, visibleCount = 4, interval = 4000, 
     mo.observe(track, { childList: true, subtree: true });
   }
 }
+
+
+
+
 
 
 
