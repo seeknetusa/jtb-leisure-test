@@ -898,8 +898,8 @@ async function fetchRecommendedTours(containerId) {
 
     // ★ 描画が終わったら自動ループ開始
     //setupReverseLoopScroll(containerId, 4, 4000);
-
-    setupTransformCarousel(containerId, 4, 4000);
+    //setupTransformCarousel(containerId, 4, 4000);
+    //setupTransformCarouselFallback(containerId, 4, 4000);
   } catch (e) {
     console.error("Failed to fetch data:", e);
   }
@@ -1362,215 +1362,182 @@ async function initSmoothTrackCarousel(containerSelector, {
 
 
 
+
+
+
+
+
+
+
+
+
 /**
- * translateX + transition で 1枚ずつスライドする無限カルーセル（peek防止）
- * 既存の setupReverseLoopScroll(containerId, visibleCount, interval) と同じ呼び出しでOK
+ * 予備：transform＋DOM入れ替え型のカルーセル初期化
+ * - HTML/CSS は既存のまま（.tour-slider-track .w-dyn-items / .tour-slide）
+ * - renderRecommendedCarousel() が描画した後に呼んでください
  *
- * - 左端の「半分カード」をなくすため、コンテナ幅からカード幅を再計算して
- *   1画面に visibleCount 枚ピッタリ収まるように flex-basis を強制設定します。
- *
- * @param {string} containerId - 例: "recommended-carousel" または "#recommended-carousel"
- * @param {number} visibleCount - 1画面に見せる枚数（例：4）
- * @param {number} interval - 自動送り間隔(ms) 例: 4000
- * @param {Object} opts - 省略可: { leftBtn, rightBtn, duration, easing, gapPx }
+ * @param {string|Element} containerId - カルーセルのルート（ID文字列 or CSSセレクタ or 要素）
+ * @param {number} visibleCount        - 表示枚数の目安（現行ロジックでは幅計算に使わないが、API互換のため残置）
+ * @param {number} intervalMs          - 自動スライド間隔（ms）
+ * @returns {{next:Function, prev:Function, start:Function, stop:Function, destroy:Function}|null}
  */
-function setupTransformCarousel(containerId, visibleCount = 4, interval = 4000, opts = {}) {
-  const {
-    leftBtn  = '#carousel-left',
-    rightBtn = '#carousel-right',
-    duration = 500,
-    easing   = 'ease',
-    gapPx    = null, // null の場合は CSS の gap を読み取る
-  } = opts;
-
-  const idSel = containerId.startsWith('#') ? containerId : `#${containerId}`;
-  const track = document.querySelector(idSel);
-  if (!track) return;
-
-  const hasCards = () => track.querySelectorAll('.tour-card').length > 0;
-
-  // ----- 余白(gap)とカード幅を計算し、peekが出ないようカード幅を強制 -----
-  function normalizeLayout() {
-    // 親：peek防止
-    const csTrack = getComputedStyle(track);
-    track.style.overflow = 'hidden';
-    // 横並び（未設定なら付与）
-    if (csTrack.display !== 'flex') track.style.display = 'flex';
-
-    // gap を決定（オプション優先、なければ CSS の gap / column-gap を使用）
-    let gap = typeof gapPx === 'number' ? gapPx : 0;
-    if (gapPx == null) {
-      const g = parseFloat(csTrack.gap || csTrack.columnGap || '0') || 0;
-      gap = g;
-      // gap 未設定なら、見た目を保つため 16px をデフォルトで付与
-      if (!g) {
-        gap = 16;
-        track.style.gap = `${gap}px`;
-      }
-    }
-
-    // コンテナの内側幅（padding を考慮）
-    const rect = track.getBoundingClientRect();
-    const padL = parseFloat(csTrack.paddingLeft)  || 0;
-    const padR = parseFloat(csTrack.paddingRight) || 0;
-    const innerW = rect.width - padL - padR;
-
-    // 1枚あたりの幅 = (内側幅 - gap*(N-1)) / N
-    const cardW = Math.max(0, (innerW - gap * (visibleCount - 1)) / visibleCount);
-
-    // 各カードに flex-basis を明示指定（margin は 0 に）
-    const cards = track.querySelectorAll('.tour-card');
-    cards.forEach(c => {
-      c.style.flex = `0 0 ${cardW}px`;
-      c.style.margin = '0'; // gap と二重計上しない
-      c.style.boxSizing = 'border-box';
-    });
+/*
+function setupTransformCarouselFallback(containerId, visibleCount = 4, intervalMs = 4000) {
+  // ルート要素の解決（"#id" でも "id" でも OK、Element を渡してもOK）
+  let root = null;
+  if (containerId instanceof Element) {
+    root = containerId;
+  } else if (typeof containerId === 'string') {
+    root = document.querySelector(containerId) || document.getElementById(containerId) || document.querySelector(`#${containerId}`);
+  }
+  if (!root) {
+    console.warn('[setupTransformCarouselFallback] container not found:', containerId);
+    return null;
   }
 
-  // 1コマ幅：隣カードの left 差で測る（gap込みで安定）
+  // 多重初期化を防止
+  if (root.dataset.carouselInitialized === '1') {
+    // 既に初期化済みなら何もしない
+    return root._carouselApi || null;
+  }
+
+  const track = root.querySelector('.tour-slider-track .w-dyn-items');
+  const leftBtn = root.querySelector('.tour-left-arrow');
+  const rightBtn = root.querySelector('.tour-right-arrow');
+
+  if (!track) {
+    console.warn('[setupTransformCarouselFallback] .tour-slider-track .w-dyn-items not found under container:', root);
+    return null;
+  }
+
+  // スライドが1枚以下なら自動スライド不要
+  const slides = () => track.querySelectorAll('.tour-slide');
+  if (slides().length <= 1) {
+    // 矢印があれば無効化
+    if (leftBtn) leftBtn.disabled = true;
+    if (rightBtn) rightBtn.disabled = true;
+    return null;
+  }
+
+  // 1枚ぶんの幅（gap を CSS で付けている場合は getBoundingClientRect 差分方式にするとより正確）
   function getSlideWidth() {
-    const items = track.querySelectorAll('.tour-card');
-    if (items.length >= 2) {
-      const a = items[0].getBoundingClientRect();
-      const b = items[1].getBoundingClientRect();
-      return Math.round(b.left - a.left);
-    } else if (items.length === 1) {
-      const c  = items[0];
-      const cs = getComputedStyle(c);
-      const w  = c.getBoundingClientRect().width;
-      const ml = parseFloat(cs.marginLeft)  || 0;
-      const mr = parseFloat(cs.marginRight) || 0;
-      return Math.round(w + ml + mr);
-    }
-    return 0;
+    const first = slides()[0];
+    const second = slides()[1];
+    if (!first) return 0;
+    if (!second) return first.offsetWidth;
+    const r1 = first.getBoundingClientRect();
+    const r2 = second.getBoundingClientRect();
+    const delta = r2.left - r1.left;
+    return delta > 0 ? delta : first.offsetWidth;
   }
 
-  function setup() {
-    // まずレイアウトを正規化して「1画面に N 枚」ピッタリにする
-    normalizeLayout();
+  function slideNext() {
+    const slideWidth = getSlideWidth();
+    if (!slideWidth) return;
 
-    // スライド初期状態
-    track.style.willChange = 'transform';
-    track.style.transform  = 'translateX(0)';
+    track.style.transition = 'transform 0.5s ease';
+    track.style.transform = `translateX(-${slideWidth}px)`;
 
-    let slideW = getSlideWidth();
-    if (!slideW || slideW <= 0) {
-      // 画像未ロード等で 0 になる場合の簡易リトライ
-      setTimeout(() => {
-        normalizeLayout();
-        slideW = getSlideWidth();
-      }, 50);
-    }
-
-    let busy = false;
-    let autoTimer = null;
-
-    function slideNext() {
-      if (busy) return;
-      busy = true;
-
-      track.style.transition = `transform ${duration}ms ${easing}`;
-      track.style.transform  = `translateX(-${slideW}px)`;
-
-      setTimeout(() => {
-        track.style.transition = 'none';
-        if (track.children.length > 0) {
-          track.appendChild(track.children[0]); // 先頭→末尾
-        }
-        track.style.transform = 'translateX(0)';
-        busy = false;
-      }, duration);
-    }
-
-    function slidePrev() {
-      if (busy) return;
-      busy = true;
-
-      // 末尾→先頭 → -slideW から 0 へ
+    // アニメ後に先頭を末尾へ
+    nextTick(() => {
       track.style.transition = 'none';
-      const last = track.children[track.children.length - 1];
-      if (last) track.insertBefore(last, track.children[0]);
-      track.style.transform = `translateX(-${slideW}px)`;
+      if (track.children.length > 0) {
+        track.appendChild(track.children[0]);
+      }
+      track.style.transform = 'translateX(0)';
+    }, 500);
+  }
 
+  function slidePrev() {
+    const slideWidth = getSlideWidth();
+    if (!slideWidth) return;
+
+    // 末尾を先頭へ → 右から0へ戻す
+    track.style.transition = 'none';
+    if (track.children.length > 0) {
+      track.insertBefore(track.children[track.children.length - 1], track.children[0]);
+    }
+    track.style.transform = `translateX(-${slideWidth}px)`;
+
+    requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          track.style.transition = `transform ${duration}ms ${easing}`;
-          track.style.transform  = 'translateX(0)';
-          setTimeout(() => {
-            track.style.transition = 'none';
-            busy = false;
-          }, duration);
-        });
+        track.style.transition = 'transform 0.5s ease';
+        track.style.transform = 'translateX(0)';
       });
-    }
-
-    function startAuto() {
-      stopAuto();
-      autoTimer = setInterval(slideNext, interval);
-    }
-    function stopAuto() {
-      if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
-    }
-
-    // 自動開始
-    startAuto();
-
-    // 矢印ボタン
-    const left  = document.querySelector(leftBtn);
-    const right = document.querySelector(rightBtn);
-
-    if (right) {
-      right.addEventListener('click', () => {
-        stopAuto();
-        slideNext();
-        startAuto();
-      });
-    }
-    if (left) {
-      left.addEventListener('click', () => {
-        stopAuto();
-        slidePrev();
-        startAuto();
-      });
-    }
-
-    // ホバーで一時停止／復帰（任意）
-    track.addEventListener('mouseenter', stopAuto);
-    track.addEventListener('mouseleave', startAuto);
-
-    // リサイズ時：レイアウト再正規化 → 幅再計測
-    let resizeTimer;
-    window.addEventListener('resize', () => {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => {
-        track.style.transition = 'none';
-        track.style.transform  = 'translateX(0)';
-
-        normalizeLayout();
-        const w = getSlideWidth();
-        if (w && w > 0) slideW = w;
-      }, 120);
     });
   }
 
-  if (hasCards()) {
-    setup();
-  } else {
-    const mo = new MutationObserver(() => {
-      if (hasCards()) {
-        mo.disconnect();
-        setup();
-      }
-    });
-    mo.observe(track, { childList: true, subtree: true });
+  // タイマー管理
+  let timer = null;
+  function start() {
+    stop();
+    timer = setInterval(slideNext, intervalMs);
+  }
+  function stop() {
+    if (timer) {
+      clearInterval(timer);
+      timer = null;
+    }
+  }
+
+  // クリックで一時停止→再開
+  if (rightBtn) {
+    rightBtn.addEventListener('click', onRightClick);
+  }
+  if (leftBtn) {
+    leftBtn.addEventListener('click', onLeftClick);
+  }
+
+  function onRightClick() {
+    stop();
+    slideNext();
+    start();
+  }
+  function onLeftClick() {
+    stop();
+    slidePrev();
+    start();
+  }
+
+  // リサイズ時は位置リセット
+  function onResize() {
+    track.style.transition = 'none';
+    track.style.transform = 'translateX(0)';
+  }
+  window.addEventListener('resize', onResize);
+
+  // DOMContentLoaded 待ちは不要（呼び出し元で描画済みのため）
+  start();
+
+  // 後始末 API
+  function destroy() {
+    stop();
+    window.removeEventListener('resize', onResize);
+    if (rightBtn) rightBtn.removeEventListener('click', onRightClick);
+    if (leftBtn) leftBtn.removeEventListener('click', onLeftClick);
+    root.dataset.carouselInitialized = '0';
+    delete root._carouselApi;
+  }
+
+  // 多重初期化対策のフラグと公開API
+  root.dataset.carouselInitialized = '1';
+  const api = { next: slideNext, prev: slidePrev, start, stop, destroy };
+  root._carouselApi = api;
+  return api;
+
+  // ---- helpers ----
+  function nextTick(fn, delay) {
+    if (typeof delay === 'number' && delay > 0) {
+      setTimeout(fn, delay);
+    } else {
+      requestAnimationFrame(() => requestAnimationFrame(fn));
+    }
   }
 }
 
-
-
-
-
-
+// グローバルにも露出（必要ならESMのexportに変更可）
+window.setupTransformCarouselFallback = setupTransformCarouselFallback;
+*/
 
 
 
