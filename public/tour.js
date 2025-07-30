@@ -897,7 +897,9 @@ async function fetchRecommendedTours(containerId) {
     renderRecommendedCarousel(all, containerId);
 
     // ★ 描画が終わったら自動ループ開始
-    setupReverseLoopScroll(containerId, 4, 4000);
+    //setupReverseLoopScroll(containerId, 4, 4000);
+
+    setupTransformCarousel(containerId, 4, 4000);
   } catch (e) {
     console.error("Failed to fetch data:", e);
   }
@@ -1357,12 +1359,186 @@ async function initSmoothTrackCarousel(containerSelector, {
   });
 }
 
+
+
+
+
+
+
+
+
+
+/**
+ * translateX + transition で 1枚ずつスライドする無限カルーセル
+ * 既存の setupReverseLoopScroll(containerId, visibleCount, interval) と互換の呼び出しでOK
+ *
+ * @param {string} containerId - 例: "recommended-carousel" または "#recommended-carousel"
+ * @param {number} visibleCount - （受け取るだけ。CSS側で幅を決める想定。ここでは1枚分スライド）
+ * @param {number} interval - 自動送り間隔(ms) 例: 4000
+ * @param {Object} opts - 省略可: { leftBtn, rightBtn, duration, easing }
+ */
+function setupTransformCarousel(containerId, visibleCount = 4, interval = 4000, opts = {}) {
+  // ------- 設定 -------
+  const {
+    leftBtn  = '#carousel-left',
+    rightBtn = '#carousel-right',
+    duration = 500,         // スライド時間(ms) Webflow例に合わせて0.5s
+    easing   = 'ease'
+  } = opts;
+
+  const idSel = containerId.startsWith('#') ? containerId : `#${containerId}`;
+  const track = document.querySelector(idSel);
+  if (!track) return;
+
+  // .tour-card が非同期で追加される前提：監視してから初期化
+  const hasCards = () => track.querySelectorAll('.tour-card').length > 0;
+
+  // 1コマ幅（隣カードの left 差で gap/margin ごと測る）
+  function getSlideWidth() {
+    const items = track.querySelectorAll('.tour-card');
+    if (items.length >= 2) {
+      const a = items[0].getBoundingClientRect();
+      const b = items[1].getBoundingClientRect();
+      return Math.round(b.left - a.left);
+    } else if (items.length === 1) {
+      const c = items[0];
+      const cs = getComputedStyle(c);
+      const w  = c.getBoundingClientRect().width;
+      const ml = parseFloat(cs.marginLeft)  || 0;
+      const mr = parseFloat(cs.marginRight) || 0;
+      return Math.round(w + ml + mr);
+    }
+    return 0;
+  }
+
+  function setup() {
+    // 親は peek 防止
+    const cs = getComputedStyle(track);
+    if (cs.overflowX !== 'hidden') track.style.overflowX = 'hidden';
+    track.style.willChange = 'transform';
+    track.style.transform  = 'translateX(0)';
+
+    let slideW = getSlideWidth();
+    if (!slideW || slideW <= 0) {
+      // 画像未ロードなどで0になった場合の簡易リトライ
+      setTimeout(() => { slideW = getSlideWidth(); }, 50);
+    }
+
+    let busy = false;     // 二重実行防止
+    let autoTimer = null; // 自動送り
+
+    function slideNext() {
+      if (busy) return;
+      busy = true;
+
+      track.style.transition = `transform ${duration}ms ${easing}`;
+      track.style.transform  = `translateX(-${slideW}px)`;
+
+      setTimeout(() => {
+        track.style.transition = 'none';
+        if (track.children.length > 0) {
+          track.appendChild(track.children[0]); // 先頭→末尾
+        }
+        track.style.transform = 'translateX(0)';
+        busy = false;
+      }, duration);
+    }
+
+    function slidePrev() {
+      if (busy) return;
+      busy = true;
+
+      // 末尾→先頭 → -slideW から 0 へ
+      track.style.transition = 'none';
+      const last = track.children[track.children.length - 1];
+      if (last) track.insertBefore(last, track.children[0]);
+      track.style.transform = `translateX(-${slideW}px)`;
+
+      // ダブルrAFでレイアウト確定後にアニメ適用
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          track.style.transition = `transform ${duration}ms ${easing}`;
+          track.style.transform  = 'translateX(0)';
+          setTimeout(() => {
+            track.style.transition = 'none';
+            busy = false;
+          }, duration);
+        });
+      });
+    }
+
+    function startAuto() {
+      stopAuto();
+      autoTimer = setInterval(slideNext, interval);
+    }
+    function stopAuto() {
+      if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+    }
+
+    // 自動開始
+    startAuto();
+
+    // 矢印ボタン
+    const left  = document.querySelector(leftBtn);
+    const right = document.querySelector(rightBtn);
+
+    if (right) {
+      right.addEventListener('click', () => {
+        stopAuto();
+        slideNext();
+        startAuto();
+      });
+    }
+    if (left) {
+      left.addEventListener('click', () => {
+        stopAuto();
+        slidePrev();
+        startAuto();
+      });
+    }
+
+    // ホバーで一時停止／復帰（任意）
+    track.addEventListener('mouseenter', stopAuto);
+    track.addEventListener('mouseleave', startAuto);
+
+    // リサイズ時：位置リセット＆幅再計測
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        track.style.transition = 'none';
+        track.style.transform  = 'translateX(0)';
+        const w = getSlideWidth();
+        if (w && w > 0) slideW = w;
+      }, 120);
+    });
+  }
+
+  // すでにカードがあるなら即セットアップ、なければ監視してから
+  if (hasCards()) {
+    setup();
+  } else {
+    const mo = new MutationObserver(() => {
+      if (hasCards()) {
+        mo.disconnect();
+        setup();
+      }
+    });
+    mo.observe(track, { childList: true, subtree: true });
+  }
+}
+
+
+
+
+
 // ============================
 //  右方向の無限ループスクロール
 // ============================
 
 
 
+/*
 function setupReverseLoopScroll(carouselId, visibleCount = 4, interval = 4000) {
   const carousel = document.getElementById(carouselId);
   if (!carousel) return;
@@ -1533,7 +1709,7 @@ function setupReverseLoopScroll(carouselId, visibleCount = 4, interval = 4000) {
     }, 150);
   });
 }
-
+*/
 
 
 
