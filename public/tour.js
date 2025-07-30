@@ -897,7 +897,7 @@ async function fetchRecommendedTours(containerId) {
     renderRecommendedCarousel(all, containerId);
 
     // ★ 描画が終わったら自動ループ開始
-    setupReverseLoopScroll(containerId, 4, 3000);
+    setupReverseLoopScroll(containerId, 4, 4000);
   } catch (e) {
     console.error("Failed to fetch data:", e);
   }
@@ -1167,10 +1167,378 @@ function extractUniqueDestinations(tours) {
   return encodeURIComponent(unique.join(',')); // カンマ区切りで結合し、URLエンコードして返す
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+// 画像ロード待ち（幅0対策）
+function waitImagesLoaded(scope) {
+  const imgs = scope.querySelectorAll('.tour-card img');
+  const jobs = [];
+  imgs.forEach(img => {
+    if (!img.complete) {
+      jobs.push(new Promise(res => {
+        img.addEventListener('load', res, { once: true });
+        img.addEventListener('error', res, { once: true });
+      }));
+    }
+  });
+  return Promise.all(jobs);
+}
+
+/**
+ * transform(translateX) + transition で滑らかに動くカルーセル
+ * - containerSelector: 例 '#recommended-carousel'
+ * - options: { leftBtn, rightBtn, interval, duration, easing }
+ */
+async function initSmoothTrackCarousel(containerSelector, {
+  leftBtn  = null,
+  rightBtn = null,
+  interval = 4000,
+  duration = 500,
+  easing   = 'ease'
+} = {}) {
+
+  const root = document.querySelector(containerSelector);
+  if (!root) return;
+
+  // 画像がある場合はロード完了を待つ（計測安定化）
+  await waitImagesLoaded(root);
+
+  // 既に track があれば再利用。なければ .tour-card だけ包み直す
+  let track = root.querySelector('.carousel-track');
+  if (!track) {
+    // root 直下の .tour-card を収集（※深い階層の場合はセレクタを調整）
+    const cards = Array.from(root.querySelectorAll(':scope > .tour-card'));
+    if (cards.length === 0) return;
+
+    track = document.createElement('div');
+    track.className = 'carousel-track';
+    track.style.display = 'flex';               // 横並び
+    track.style.willChange = 'transform';
+    track.style.transform = 'translateX(0)';
+
+    // .tour-card だけを track に移す（矢印ボタンなど他の要素は root に残す）
+    cards.forEach(c => track.appendChild(c));
+    root.appendChild(track);
+  }
+
+  // 親は peek を出さない
+  const rootStyle = window.getComputedStyle(root);
+  if (rootStyle.overflowX !== 'hidden') root.style.overflowX = 'hidden';
+
+  // 1コマ幅：隣接カードの left 差（gap/margin を含められる）
+  function getSlideWidth() {
+    const cards = track.querySelectorAll('.tour-card');
+    if (cards.length >= 2) {
+      const a = cards[0].getBoundingClientRect();
+      const b = cards[1].getBoundingClientRect();
+      return Math.round(b.left - a.left);
+    } else if (cards.length === 1) {
+      const c = cards[0];
+      const cs = getComputedStyle(c);
+      const w = c.getBoundingClientRect().width;
+      const ml = parseFloat(cs.marginLeft) || 0;
+      const mr = parseFloat(cs.marginRight) || 0;
+      return Math.round(w + ml + mr);
+    }
+    return 0;
+  }
+
+  let slideW = getSlideWidth();
+  if (!slideW || slideW <= 0) {
+    // それでも 0 なら少し待って再計測
+    await new Promise(r => setTimeout(r, 50));
+    slideW = getSlideWidth();
+    if (!slideW || slideW <= 0) return;
+  }
+
+  // ====== スライド関数（translateX で“スーッ”） ======
+  let autoTimer = null;
+  let busy = false;
+
+  function slideNext() {
+    if (busy) return;
+    busy = true;
+
+    track.style.transition = `transform ${duration}ms ${easing}`;
+    track.style.transform = `translateX(-${slideW}px)`;
+
+    // アニメ後：先頭を末尾へ → transform を 0 に戻す
+    setTimeout(() => {
+      track.style.transition = 'none';
+      if (track.children.length > 0) {
+        track.appendChild(track.children[0]);
+      }
+      track.style.transform = 'translateX(0)';
+      busy = false;
+    }, duration);
+  }
+
+  function slidePrev() {
+    if (busy) return;
+    busy = true;
+
+    // 先に末尾を先頭へ → -slideW から 0 へ“スーッ”
+    track.style.transition = 'none';
+    const last = track.children[track.children.length - 1];
+    if (last) track.insertBefore(last, track.children[0]);
+    track.style.transform = `translateX(-${slideW}px)`;
+
+    // ダブル rAF でレイアウト確定後に遷移を適用
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        track.style.transition = `transform ${duration}ms ${easing}`;
+        track.style.transform = 'translateX(0)';
+        setTimeout(() => {
+          track.style.transition = 'none';
+          busy = false;
+        }, duration);
+      });
+    });
+  }
+
+  // ====== 自動スライド ======
+  function startAuto() {
+    if (autoTimer) clearInterval(autoTimer);
+    autoTimer = setInterval(slideNext, interval);
+  }
+  function stopAuto() {
+    if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+  }
+  startAuto();
+
+  // ====== 矢印ボタン接続 ======
+  if (rightBtn) {
+    const el = document.querySelector(rightBtn);
+    if (el) {
+      el.addEventListener('click', e => {
+        e.preventDefault();
+        stopAuto();
+        slideNext();
+        startAuto();
+      });
+    }
+  }
+  if (leftBtn) {
+    const el = document.querySelector(leftBtn);
+    if (el) {
+      el.addEventListener('click', e => {
+        e.preventDefault();
+        stopAuto();
+        slidePrev();
+        startAuto();
+      });
+    }
+  }
+
+  // 任意：ホバーで一時停止/復帰
+  root.addEventListener('mouseenter', stopAuto);
+  root.addEventListener('mouseleave', startAuto);
+
+  // リサイズ：位置リセット＆幅再計測
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      track.style.transition = 'none';
+      track.style.transform = 'translateX(0)';
+      const w = getSlideWidth();
+      if (w && w > 0) slideW = w;
+    }, 120);
+  });
+}
+
 // ============================
 //  右方向の無限ループスクロール
 // ============================
-function setupReverseLoopScroll(carouselId, visibleCount = 4, interval = 3000) {
+
+
+
+function setupReverseLoopScroll(carouselId, visibleCount = 4, interval = 4000) {
+  const carousel = document.getElementById(carouselId);
+  if (!carousel) return;
+
+  // ---- 再初期化対策 ----
+  if (carousel._autoScrollTimer) {
+    clearInterval(carousel._autoScrollTimer);
+    carousel._autoScrollTimer = null;
+  }
+  let restartTimer = null;   // 手動操作後の自動再開用
+  let isAnimating = false;   // 自動スクロールの二重実行防止
+  let busyClick = false;     // クリック処理中のガード
+
+  // ---- 1コマ幅：隣カードの左座標差（gap/margin込み）----
+  function getCardWidth() {
+    const cards = carousel.querySelectorAll('.tour-card');
+    if (cards.length >= 2) {
+      const a = cards[0].getBoundingClientRect();
+      const b = cards[1].getBoundingClientRect();
+      return Math.round(b.left - a.left);
+    } else if (cards.length === 1) {
+      const card = cards[0];
+      const style = window.getComputedStyle(card);
+      const w = card.getBoundingClientRect().width;
+      const ml = parseFloat(style.marginLeft) || 0;
+      const mr = parseFloat(style.marginRight) || 0;
+      return Math.round(w + ml + mr);
+    }
+    return 250; // fallback
+  }
+
+  let cardWidth = getCardWidth();
+  if (!cardWidth || cardWidth <= 0) return;
+
+  // ---- 初期整列（左方向用：peekなしで 0 スタート）----
+  carousel.style.overflowX = carousel.style.overflowX || 'hidden'; // peek防止
+  carousel.scrollLeft = 0;
+  snapToBoundary();
+
+  // ---- 共通ヘルパー ----
+  const animMs  = 400; // 自動スクロール時の scrollBy アニメ時間目安
+  const clickMs = 500; // クリック時の transform アニメ時間（使わない場合もあり）
+
+  function snapToBoundary() {
+    const n = Math.round(carousel.scrollLeft / cardWidth);
+    carousel.scrollLeft = n * cardWidth;
+  }
+
+  function pauseAuto() {
+    if (carousel._autoScrollTimer) {
+      clearInterval(carousel._autoScrollTimer);
+      carousel._autoScrollTimer = null;
+    }
+    if (restartTimer) {
+      clearTimeout(restartTimer);
+      restartTimer = null;
+    }
+  }
+
+  function resumeAuto(delay = 1200) {
+    if (restartTimer) clearTimeout(restartTimer);
+    restartTimer = setTimeout(() => {
+      if (!carousel._autoScrollTimer) {
+        carousel._autoScrollTimer = setInterval(moveNext, interval);
+      }
+    }, delay);
+  }
+
+  // ---- 自動：1コマ進む（左方向：右→左へ流れる）----
+  function moveNext() {
+    if (isAnimating || busyClick) return;
+    isAnimating = true;
+
+    // 右に1コマ分スクロール（見た目は左へ流れる）
+    carousel.scrollBy({ left: +cardWidth, behavior: 'smooth' });
+
+    // アニメ後：先頭→末尾へ、位置補正
+    setTimeout(() => {
+      const first = carousel.firstElementChild;
+      if (first) {
+        carousel.appendChild(first);
+        carousel.scrollLeft -= cardWidth; // 位置補正（境界維持）
+      }
+      snapToBoundary();
+      isAnimating = false;
+    }, animMs);
+  }
+
+  // ---- 自動：1コマ戻る（右方向）----
+  function movePrev() {
+    if (isAnimating || busyClick) return;
+    isAnimating = true;
+
+    // 事前に末尾→先頭＆位置補正
+    const last = carousel.lastElementChild;
+    if (last) {
+      carousel.prepend(last);
+      carousel.scrollLeft += cardWidth; // 位置補正（境界維持）
+    }
+
+    // 左へ1コマ分スクロール
+    carousel.scrollBy({ left: -cardWidth, behavior: 'smooth' });
+
+    setTimeout(() => {
+      snapToBoundary();
+      isAnimating = false;
+    }, animMs);
+  }
+
+  // ---- 自動スクロール開始（左方向へ進む）----
+  carousel._autoScrollTimer = setInterval(moveNext, interval);
+
+  // ---- ホバーで一時停止/復帰（任意）----
+  carousel.addEventListener('mouseenter', pauseAuto);
+  carousel.addEventListener('mouseleave', () => resumeAuto());
+
+  // ======================================================
+  // クリック（左右矢印）：イベントデリゲーションで確実に反応
+  // - .tour-left-arrow / .tour-right-arrow
+  // - 代替で #carousel-left / #carousel-right
+  // ======================================================
+  const LEFT_SELECTOR  = '.tour-left-arrow, #carousel-left';
+  const RIGHT_SELECTOR = '.tour-right-arrow, #carousel-right';
+
+  // 左（戻る）
+  document.addEventListener('click', (e) => {
+    const leftBtn = e.target.closest(LEFT_SELECTOR);
+    if (!leftBtn) return;
+    e.preventDefault();
+
+    // 必要なら、該当カルーセル内の矢印のみ受け付けたい場合は下を有効化
+    // if (!carousel.contains(leftBtn)) return;
+
+    pauseAuto();
+    movePrev();
+    resumeAuto();
+  }, { passive: false });
+
+  // 右（進む）
+  document.addEventListener('click', (e) => {
+    const rightBtn = e.target.closest(RIGHT_SELECTOR);
+    if (!rightBtn) return;
+    e.preventDefault();
+
+    // if (!carousel.contains(rightBtn)) return;
+
+    pauseAuto();
+    moveNext();
+    resumeAuto();
+  }, { passive: false });
+
+  // デバッグ用ログ（見つからないときの気付きに）
+  const leftCount  = document.querySelectorAll(LEFT_SELECTOR).length;
+  const rightCount = document.querySelectorAll(RIGHT_SELECTOR).length;
+  if (leftCount === 0 && rightCount === 0) {
+    console.warn('Carousel arrows not found. Looking for .tour-left-arrow/.tour-right-arrow or #carousel-left/#carousel-right');
+  }
+
+  // ---- リサイズ時：幅再計測＆境界スナップ（peek再発防止）----
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      cardWidth = getCardWidth();
+      if (cardWidth > 0) {
+        snapToBoundary();
+      }
+    }, 150);
+  });
+}
+
+
+
+
+/*
+function setupReverseLoopScroll(carouselId, visibleCount = 4, interval = 4000) {
   const carousel = document.getElementById(carouselId);
   if (!carousel) return;
 
@@ -1203,18 +1571,15 @@ function setupReverseLoopScroll(carouselId, visibleCount = 4, interval = 3000) {
   let cardWidth = getCardWidth();
   if (!cardWidth || cardWidth <= 0) return;
 
-  // ---- 初期整列（peekなしの土台作り）----
-  for (let i = 0; i < visibleCount; i++) {
-    const last = carousel.lastElementChild;
-    if (last) carousel.prepend(last);
-  }
-  carousel.scrollLeft = cardWidth * visibleCount;
+  // ---- 初期整列（左方向用：peekなしで 0 スタート）----
+  // ※ 右方向版のような prepend は不要。まずは 0 にスナップ。
+  carousel.scrollLeft = 0;
+  snapToBoundary();
 
   // ---- 共通ヘルパー ----
-  const animMs = 400; // スクロールのアニメ時間（scrollByのsmooth時間目安）
+  const animMs = 400; // scrollBy の smooth 相当の時間目安
 
   function snapToBoundary() {
-    // カード境界(整数倍)にピタッと
     const n = Math.round(carousel.scrollLeft / cardWidth);
     carousel.scrollLeft = n * cardWidth;
   }
@@ -1239,38 +1604,40 @@ function setupReverseLoopScroll(carouselId, visibleCount = 4, interval = 3000) {
     }, delay);
   }
 
-  // ---- 1コマ進む（自動／右矢印と同じ動き）----
+  // ---- 1コマ進む（左方向：右から左へ）----
   function moveNext() {
     if (isAnimating) return;
     isAnimating = true;
 
-    // 左に1コマ分スクロール（見た目は次のカードへ）
-    carousel.scrollBy({ left: -cardWidth, behavior: 'smooth' });
+    // 右へ 1コマ分スクロール（= 次のカードが右から入ってくる＝左方向に流れる）
+    carousel.scrollBy({ left: +cardWidth, behavior: 'smooth' });
 
-    // アニメ後に末尾→先頭へ移動し、境界をスナップ
+    // アニメ後：先頭→末尾へ送り、位置を 1コマ戻して見た目を継続
     setTimeout(() => {
-      const last = carousel.lastElementChild;
-      if (last) carousel.prepend(last);
+      const first = carousel.firstElementChild;
+      if (first) {
+        carousel.appendChild(first);
+        carousel.scrollLeft -= cardWidth; // 位置補正（境界維持）
+      }
       snapToBoundary();
       isAnimating = false;
     }, animMs);
   }
 
-  // ---- 1コマ戻る（左矢印の動き）----
+  // ---- 1コマ戻る（右方向：左から右へ＝左方向の逆）----
   function movePrev() {
     if (isAnimating) return;
     isAnimating = true;
 
-    // 逆方向のループは「先頭を末尾に移動して scrollLeft を補正」→右へスムーススクロール
-    const first = carousel.firstElementChild;
-    if (first) {
-      // 先頭を末尾に送り、表示が変わらないよう scrollLeft を左へ1コマ分ずらす
-      carousel.appendChild(first);
-      carousel.scrollLeft -= cardWidth;
+    // アニメ前に：末尾→先頭へ送り、1コマ分右へ寄せておく
+    const last = carousel.lastElementChild;
+    if (last) {
+      carousel.prepend(last);
+      carousel.scrollLeft += cardWidth; // 位置補正（境界維持）
     }
 
-    // 右に1コマ分スクロール（＝前のカードが表示される）
-    carousel.scrollBy({ left: cardWidth, behavior: 'smooth' });
+    // 左へ 1コマ分スクロール（= 逆方向）
+    carousel.scrollBy({ left: -cardWidth, behavior: 'smooth' });
 
     setTimeout(() => {
       snapToBoundary();
@@ -1278,7 +1645,7 @@ function setupReverseLoopScroll(carouselId, visibleCount = 4, interval = 3000) {
     }, animMs);
   }
 
-  // ---- 自動スクロール開始 ----
+  // ---- 自動スクロール開始（左方向へ進む）----
   carousel._autoScrollTimer = setInterval(moveNext, interval);
 
   // ---- ホバーで一時停止/復帰（任意）----
@@ -1289,10 +1656,11 @@ function setupReverseLoopScroll(carouselId, visibleCount = 4, interval = 3000) {
     resumeAuto();
   });
 
-  // ---- 矢印ボタンを接続（IDはあなたのHTMLに合わせて）----
+  // ---- 矢印ボタン接続（IDはHTMLに合わせて）----
   const leftBtn  = document.getElementById('carousel-left');
   const rightBtn = document.getElementById('carousel-right');
 
+  // 左矢印：右方向に戻る（= movePrev）
   if (leftBtn) {
     leftBtn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -1301,6 +1669,7 @@ function setupReverseLoopScroll(carouselId, visibleCount = 4, interval = 3000) {
       resumeAuto();
     });
   }
+  // 右矢印：左方向に進む（= moveNext）
   if (rightBtn) {
     rightBtn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -1322,6 +1691,7 @@ function setupReverseLoopScroll(carouselId, visibleCount = 4, interval = 3000) {
     }, 150);
   });
 }
+*/
 
 /*
 function setupReverseLoopScroll(carouselId, visibleCount = 4, interval = 3000) {
