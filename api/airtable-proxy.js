@@ -39,6 +39,9 @@ export default async function handler(req, res) {
     case '3':
       tableName = 'Description';
       break;
+    case '4':
+      tableName = 'Itinerary';
+      break;
     default:
       tableName = process.env.AIRTABLE_TABLE_NAME;;
   }
