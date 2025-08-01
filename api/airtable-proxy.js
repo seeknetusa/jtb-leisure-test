@@ -17,8 +17,8 @@ export default async function handler(req, res) {
 
   const {
     table,
-    sortField = 'Name',
-    sortDirection = 'asc',
+    sortField = '',
+    sortDirection = '',
     offset = '',
     filterField,
     filterValue,
@@ -130,7 +130,9 @@ export default async function handler(req, res) {
   }
 
   // ソート条件を追加
-  url += `&sort[0][field]=${encodeURIComponent(sortField)}&sort[0][direction]=${encodeURIComponent(sortDirection)}`;
+  if(sortField && sortDirection){
+    url += `&sort[0][field]=${encodeURIComponent(sortField)}&sort[0][direction]=${encodeURIComponent(sortDirection)}`;
+  }
   
   // ページネーションの offset がある場合
   if (offset) url += `&offset=${offset}`;
