@@ -1068,79 +1068,456 @@ async function renderTourDetail(recordId) {
     }
 
 
+// ★ Itinerary の描画を追加
+const itiIds = fields.Itinerary;
+if (Array.isArray(itiIds) && itiIds.length > 0) {
+  // 第2引数の tableNumber は実テーブル番号に合わせて変更（仮: 2）
+  await renderTourItinerary(itiIds, 4);
+}
 
-
+// Feature & Remarks を反映（Remarksテーブル番号は実際の番号に）
+await renderFeatureAndRemarks(fields, 5);
 
 
   }
 }
 
+
+
+
+
+
+
+
+
+
+
+// サムネ優先URL
+function pickAttachmentUrl(att) {
+  if (!att) return "";
+  const t = att.thumbnails || {};
+  return t.full?.url || t.large?.url || t.small?.url || att.url || "";
+}
+
+// 拡張子除去
+function fileNameWithoutExt(name = "") {
+  return String(name).replace(/\.[^/.]+$/, "");
+}
+
+
+
+
+// ---- 共通: RECORD_ID() + カンマ区切りでまとめ取得（vercel proxy仕様）----
+async function fetchByRecordIds(tableNumber, ids = []) {
+  if (!Array.isArray(ids) || ids.length === 0) return [];
+  const idParam = encodeURIComponent(ids.join(','));
+
+  let all = [];
+  let offset = null;
+  let guard = 0;
+  do {
+    let url = `${apiBaseUrl}?table=${tableNumber}&filterField=RECORD_ID()&filterValue=${idParam}`;
+    if (offset) url += `&offset=${offset}`;
+
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.error(`Airtable API error ${res.status}: ${await res.text()}`);
+      break;
+    }
+    const data = await res.json();
+    all.push(...(data?.records || []));
+    offset = data?.offset;
+    guard++;
+  } while (offset && guard < 50);
+
+  return all;
+}
+
+/**
+ * Feature/Remarks の差し込み
+ * @param {Object} fields - Tour の fields オブジェクト
+ * @param {number} remarksTableNumber - Remarks テーブル番号（例: 4）※実環境に合わせて
+ */
+async function renderFeatureAndRemarks(fields, remarksTableNumber = 2) {
+  // -------- Feature --------
+  const featureSection = document.querySelector('.feature');
+  if (featureSection) {
+    const depWrap = featureSection.querySelector('.departure_date');
+    const arrWrap = featureSection.querySelector('.arrangement');
+
+    // Departure Date
+    const depP = depWrap?.querySelector('p');
+    if (depP) {
+      const depText = fields["Feature - Departure Date"] || "";
+      if (String(depText).trim()) {
+        depP.textContent = depText;
+        depWrap.style.display = "";
+      } else {
+        // 空ならブロックごと非表示（常に見せたいならこの行を外す）
+        depWrap.style.display = "none";
+      }
+    }
+
+    // Type of travel arrangement
+    const arrP = arrWrap?.querySelector('p');
+    if (arrP) {
+      const arrText = fields["Feature - Type of travel arrangement"] || "";
+      if (String(arrText).trim()) {
+        arrP.textContent = arrText;
+        arrWrap.style.display = "";
+      } else {
+        arrWrap.style.display = "none";
+      }
+    }
+  }
+
+  // -------- Remarks --------
+  const remarksSection = document.querySelector('.remarks');
+  if (!remarksSection) return;
+
+  const ol = remarksSection.querySelector('ol');
+  if (!ol) return;
+
+  // 既存の li をクリア
+  ol.innerHTML = "";
+
+  const remarkIds = fields.Remarks;
+  if (!Array.isArray(remarkIds) || remarkIds.length === 0) {
+    // 何も無ければセクションを隠す（必要なら見出しだけ残すように変更可能）
+    remarksSection.style.display = "none";
+    return;
+  }
+
+  // Remarks テーブルから一括取得
+  let recs = await fetchByRecordIds(remarksTableNumber, remarkIds);
+
+  console.log('recs', recs);
+
+  // Tour 側のリンク順を維持（Airtableは順不同で返ることがある）
+  const orderMap = new Map(remarkIds.map((id, idx) => [id, idx]));
+  recs.sort((a, b) => (orderMap.get(a.id) ?? 9999) - (orderMap.get(b.id) ?? 9999));
+
+  // Content っぽいフィールド名をフォールバックで拾う
+  recs.forEach(rec => {
+    const f = rec.fields || {};
+    const content =
+      f.Content ||
+      f["Content (from Remarks)"] ||
+      f.Remark ||
+      f.Note ||
+      "";
+
+    const text = String(content || "").trim();
+    if (!text) return;
+
+    const li = document.createElement('li');
+    // 改行を可視化（不要なら textContent に）
+    li.innerHTML = text.replace(/\r?\n/g, "<br>");
+    ol.appendChild(li);
+  });
+
+  // すべて空だった場合はセクションを隠す
+  if (!ol.children.length) {
+    remarksSection.style.display = "none";
+  } else {
+    remarksSection.style.display = "";
+  }
+}
+
+
+
+
+
+/*
+async function fetchByRecordIds(tableNumber, ids = []) {
+  if (!Array.isArray(ids) || ids.length === 0) return [];
+  const idParam = encodeURIComponent(ids.join(','));
+
+  let all = [];
+  let offset = null;
+  let guard = 0;
+  do {
+    let url = `${apiBaseUrl}?table=${tableNumber}&filterField=RECORD_ID()&filterValue=${idParam}`;
+    if (offset) url += `&offset=${offset}`;
+
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.error(`Airtable API error ${res.status}: ${await res.text()}`);
+      break;
+    }
+    const data = await res.json();
+    all.push(...(data?.records || []));
+    offset = data?.offset;
+    guard++;
+  } while (offset && guard < 50);
+
+  return all;
+}
+  */
+
+/**
+ * Itinerary の ID 配列から Day/Title/Detail/Image/Accommodation/Meal/Transportaion/Note を取得し、
+ * <section class="tour-itinerary"> 内の .day テンプレを複製して差し込む。
+ *
+ * @param {string[]} itineraryIds  Tour.fields.Itinerary の ID 配列
+ * @param {number} tableNumber     Itinerary テーブル番号（例: 2）※実環境に合わせて
+ */
+async function renderTourItinerary(itineraryIds = [], tableNumber = 2) {
+  if (!Array.isArray(itineraryIds) || itineraryIds.length === 0) return;
+
+  // 取得 → Day 昇順
+  let records = await fetchByRecordIds(tableNumber, itineraryIds);
+  records.sort((a, b) => {
+    const da = Number(a?.fields?.Day ?? Infinity);
+    const db = Number(b?.fields?.Day ?? Infinity);
+    return da - db;
+  });
+
+  const section = document.querySelector(".tour-itinerary");
+  if (!section) return;
+
+  // ---- .day テンプレを確保（最初の1つをひな形化）----
+  let dayTpl = section.querySelector(".day.day-template");
+  if (!dayTpl) {
+    dayTpl = section.querySelector(".day");
+    if (!dayTpl) {
+      // 万一 .day が無ければ、骨組みを作る（保険）
+      dayTpl = document.createElement("div");
+      dayTpl.className = "day";
+      dayTpl.innerHTML = `
+        <h3></h3>
+        <p></p>
+        <img src="" alt="">
+        <div class="accommodation">ACCOMMODATION:<p></p></div>
+        <div class="meal">MEAL:<p></p></div>
+        <div class="transportaion">Transportaion:<p></p></div>
+        <div class="note">Note:<p></p></div>`;
+      section.appendChild(dayTpl);
+    }
+    dayTpl.classList.add("day-template");
+    dayTpl.hidden = true;
+  }
+
+  // ---- 既存の出力（テンプレ以外の .day）を削除 ----
+  Array.from(section.querySelectorAll(".day:not(.day-template)")).forEach(n => n.remove());
+
+  // ---- 差し込み ----
+  records.forEach(rec => {
+    const f = rec.fields || {};
+
+    const dayNum = f.Day != null ? String(f.Day) : "";
+    const title  = f.Title || f.Name || "";
+    const detail = f.Details || "";
+
+    // 画像（Images / Image / Itinerary Images のいずれか）
+    const imageArray =
+      (Array.isArray(f.Images) && f.Images.length ? f.Images : null) ||
+      (Array.isArray(f.Image) && f.Image.length ? f.Image : null) ||
+      (Array.isArray(f["Itinerary Images"]) && f["Itinerary Images"].length ? f["Itinerary Images"] : null) ||
+      [];
+    const att    = imageArray[0];
+    const imgUrl = pickAttachmentUrl(att);
+    const imgAlt = att?.filename ? fileNameWithoutExt(att.filename) : (dayNum ? `Day ${dayNum}` : "Itinerary");
+
+    // 付帯情報
+    const accText  = f.Accommodation || f["Accommodation"] || "";
+    const mealText = f.Meal || f["Meals"] || "";
+    const trspText = f.Transportaion || f.Transportation || f["Transportaion"] || f["Transportation"] || "";
+    const noteText = f.Note || f.Notes || "";
+
+    // テンプレ複製
+    const node = dayTpl.cloneNode(true);
+    node.classList.remove("day-template");
+    node.hidden = false;
+
+    // 見出し
+    const h3 = node.querySelector("h3");
+    if (h3) h3.textContent = `Day ${dayNum}${title ? `: ${title}` : ""}`;
+
+    // 本文（Detail）
+    const p = node.querySelector(":scope > p");
+
+    if (p) {
+      // 改行を活かすなら： p.innerHTML = String(detail).replace(/\r?\n/g, "<br>");
+      p.textContent = detail;
+    }
+
+    // 画像
+    const img = node.querySelector(":scope > img");
+    if (imgUrl && img) {
+      img.src = imgUrl;
+      img.alt = imgAlt;
+      img.loading = "lazy";
+    } else if (img) {
+      img.remove(); // 画像が無ければ削除
+    }
+
+    // テキストを <div> 内の <p> に差し込むヘルパー
+    const setInfo = (selector, text) => {
+      const wrap = node.querySelector(selector);
+      if (!wrap) return;
+      const content = String(text || "").trim();
+      if (!content) {
+        // 中身が空なら、そのブロックごと非表示
+        wrap.style.display = "none";
+        return;
+      }
+      const pp = wrap.querySelector("p");
+      if (pp) {
+        // 改行は <br> に
+        pp.innerHTML = content.replace(/\r?\n/g, "<br>");
+      }
+      wrap.style.display = ""; // 念のため表示
+    };
+
+    // 付帯情報差し込み（.day の内側）
+    setInfo(".accommodation",  accText);
+    setInfo(".meal",           mealText);
+    setInfo(".transportaion",  trspText); // クラス名はご提示の綴りに合わせています
+    setInfo(".note",           noteText);
+
+    section.appendChild(node);
+  });
+}
+
+
+
+
+
+
+
+
+// 添付1件から最適なURLを取り出す（full -> large -> small -> url）
+function pickAttachmentUrl(att) {
+  if (!att) return "";
+  const t = att.thumbnails || {};
+  return t.full?.url || t.large?.url || t.small?.url || att.url || "";
+}
+
+// ファイル名から拡張子を除く
+function fileNameWithoutExt(name = "") {
+  return String(name).replace(/\.[^/.]+$/, "");
+}
+
+// ← 'sync function' ではなく async に修正
 async function fetchDescriptionBlocks(descriptionIds) {
-  const url = `${apiBaseUrl}?table=3&filterField=RECORD_ID()&filterValue=${descriptionIds.join(",")}`;
+  if (!Array.isArray(descriptionIds) || descriptionIds.length === 0) return [];
 
-  const res = await fetch(url);
-  if (!res.ok) {
-    console.error("Failed to fetch descriptions");
-    return [];
-  }
-  const data = await res.json();
+  // カンマ区切りをまとめてエンコード
+  const idParam = encodeURIComponent(descriptionIds.join(","));
 
-  // ID順に並べ替える
-  return data.records.sort(
-    (a, b) => descriptionIds.indexOf(a.id) - descriptionIds.indexOf(b.id)
-  );
+  let all = [];
+  let offset = null;
+  let guard = 0;
+
+  do {
+    const url = `${apiBaseUrl}?table=3&filterField=RECORD_ID()&filterValue=${idParam}` + (offset ? `&offset=${offset}` : "");
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.error("Failed to fetch descriptions");
+      return [];
+    }
+    const data = await res.json();
+    all.push(...(data.records || []));
+    offset = data.offset;
+    guard++;
+  } while (offset && guard < 50);
+
+  // ID順に並べ替え（descIdsの順序を尊重）
+  all.sort((a, b) => descriptionIds.indexOf(a.id) - descriptionIds.indexOf(b.id));
+  return all;
 }
+
 
 async function renderTourDescriptions(descriptionIds) {
   const blocks = await fetchDescriptionBlocks(descriptionIds);
-  const descSection = document.querySelector(".description-section");
-  if (!descSection) return;
+  const section = document.querySelector(".description-section");
+  if (!section) return;
 
-  descSection.innerHTML = "";
+  // --- テンプレ確保（最初の .description-block を雛形化）---
+  let template = section.querySelector(".description-block.description-template");
+  if (!template) {
+    template = section.querySelector(".description-block");
+    if (!template) {
+      // スケルトンが無い場合は生成（念のため）
+      template = document.createElement("div");
+      template.className = "description-block";
+      template.innerHTML = `
+        <h2></h2>
+        <div class="image-text">
+          <img src="" alt="">
+          <div><p></p></div>
+        </div>`;
+      section.appendChild(template);
+    }
+    template.classList.add("description-template");
+    template.hidden = true;
+  }
 
+  // 既存のテンプレ以外の description-block を削除（毎回作り直し）
+  Array.from(section.querySelectorAll(".description-block:not(.description-template)")).forEach(n => n.remove());
+
+  // --- ブロック差し込み ---
   blocks.forEach(record => {
-    const fields = record.fields;
-    const block = document.createElement("div");
-    block.className = "description-block";
+    const f = record.fields || {};
 
-    const h2 = document.createElement("h2");
-    h2.textContent = fields.Name || "";
-    block.appendChild(h2);
+    const title = f.Name || f["Name (from Description)"] || f.Title || "";
+    // Contentを段落に分割（空行は除外）
+    const contentRaw = f.Content || f["Content (from Description)"] || "";
+    const lines = String(contentRaw).split(/\r?\n/).map(s => s.trim()).filter(Boolean);
 
-    const content = fields.Content || "";
-    const paragraphs = content
-      .split(/\r?\n/)
-      .filter(line => line.trim())
-      .map(text => {
-        const p = document.createElement("p");
-        p.textContent = text.replace(/\\\*/g, "*");
-        return p;
-      });
+    // 画像（Image / Images / Image (from Description) のいずれか）
+    const imageArr =
+      (Array.isArray(f.Image) && f.Image.length ? f.Image : null) ||
+      (Array.isArray(f.Images) && f.Images.length ? f.Images : null) ||
+      (Array.isArray(f["Image (from Description)"]) && f["Image (from Description)"].length ? f["Image (from Description)"] : null) ||
+      [];
+    const att = imageArr[0];
+    const imgUrl = pickAttachmentUrl(att);
+    const imgAlt = att?.filename ? fileNameWithoutExt(att.filename) : (title || "Description");
 
-    const imageObj = fields.Image?.[0];
-    const hasImage = imageObj?.thumbnails?.full?.url || imageObj?.url;
+    // テンプレ複製
+    const node = template.cloneNode(true);
+    node.classList.remove("description-template");
+    node.hidden = false;
 
-    if (hasImage) {
-      const wrapper = document.createElement("div");
-      wrapper.className = "image-text";
+    // h2
+    const h2 = node.querySelector("h2");
+    if (h2) h2.textContent = title;
 
-      const img = document.createElement("img");
-      img.src = imageObj.thumbnails.full.url || imageObj.url;
-      img.alt = imageObj.filename.replace(/\.[^/.]+$/, "");
+    // 画像とテキストエリア（image-text）
+    const wrapper = node.querySelector(".image-text");
+    const img = wrapper ? wrapper.querySelector("img") : null;
+    const textDiv = wrapper ? wrapper.querySelector("div") : null;
 
-      const textDiv = document.createElement("div");
-      paragraphs.forEach(p => textDiv.appendChild(p));
-
-      wrapper.appendChild(img);
-      wrapper.appendChild(textDiv);
-      block.appendChild(wrapper);
-    } else {
-      paragraphs.forEach(p => block.appendChild(p));
+    // 画像
+    if (imgUrl && img) {
+      img.src = imgUrl;
+      img.alt = imgAlt;
+      img.loading = "lazy";
+    } else if (img) {
+      // 画像無し → <img> を削除し、ブロックにクラスを付ける（CSSで縦並びなどに）
+      img.remove();
+      node.classList.add("no-image");
     }
 
-    descSection.appendChild(block);
+    // テキスト（pを差し替え）
+    if (textDiv) {
+      textDiv.innerHTML = ""; // 既存pをクリア
+      lines.forEach(line => {
+        const p = document.createElement("p");
+        // Airtable由来の \* を * に戻す処理（必要な場合）
+        p.textContent = line.replace(/\\\*/g, "*");
+        textDiv.appendChild(p);
+      });
+    }
+
+    section.appendChild(node);
   });
 }
+
+
+
 
 
 

@@ -135,6 +135,8 @@ export default async function handler(req, res) {
   // ページネーションの offset がある場合
   if (offset) url += `&offset=${offset}`;
   
+  console.log('url', url);
+
   try {
     const airtableRes = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` }
@@ -146,6 +148,8 @@ export default async function handler(req, res) {
     }
 
     const data = await airtableRes.json();
+    console.log('data', data);
+
     return res.status(200).json(data);
 
   } catch (e) {
