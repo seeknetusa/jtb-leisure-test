@@ -790,7 +790,7 @@ console.log('record', record);
     const pdfArray = f.PDF;
     const pdfUrl = Array.isArray(pdfArray) && pdfArray.length > 0 ? pdfArray[0].url : '';
     const isExternal = !!(f.URL || pdfUrl); // 外部リンク判定
-    const href = f.URL || pdfUrl || `japan-golden-route-clickable-full.html?tid=${record.id}`;
+    const href = f.URL || pdfUrl || `tour-details?tid=${record.id}`;
 
     // アイコン画像（赤と白）を外部／内部リンクで切り替え
     const redIcon = isExternal
