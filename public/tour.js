@@ -762,25 +762,20 @@ function createTourCardElement(record, logoMap) {
   priceEl.innerHTML = priceText || `from <strong>${priceFormatted}</strong> per person`;
 */
   
-  
-  
   const primary = f["Primary (from Inquiry)"]?.[0] || "";
-const parsed = parsePrimaryField(primary);
+  const parsed = parsePrimaryField(primary);
 
-// 日付差し込み
-const dateEl = clone.querySelector('.tour-dates');
-if (dateEl) {
-  dateEl.textContent = parsed.dateText || "";
-}
+  // 日付差し込み
+  const dateEl = clone.querySelector('.tour-dates');
+  if (dateEl) {
+    dateEl.textContent = parsed.dateText || "";
+  }
 
-// 価格差し込み
-const priceEl = clone.querySelector('.tour-price');
-if (priceEl) {
-  priceEl.innerHTML = parsed.priceHtml || "";
-}
-
-
-console.log('record', record);
+  // 価格差し込み
+  const priceEl = clone.querySelector('.tour-price');
+  if (priceEl) {
+    priceEl.innerHTML = parsed.priceHtml || "";
+  }
 
   // -----------------------------
   // 詳細リンクの設定
@@ -821,10 +816,6 @@ console.log('record', record);
 
   return clone; // 完成したDOMノードを返す
 }
-
-
-
-
 
 function parsePrimaryField(primaryText) {
   const result = {
@@ -867,9 +858,6 @@ function parsePrimaryField(primaryText) {
 
   return result;
 }
-
-
-
 
 /**
  * ページURLやhiddenフィールドから条件を取得し、
@@ -1181,14 +1169,9 @@ async function renderTourDetail(recordId) {
 
     if (Array.isArray(inquiryIds) && inquiryIds.length > 0) {
       await renderInquiryDetails(inquiryIds);
-    }
-
-
-    
-    
+    }      
   }
 }
-
 
 function sortRecordsByIdOrder(records, orderedIds) {
   const idToRecordMap = new Map(records.map(r => [r.id, r]));
@@ -1236,8 +1219,6 @@ async function renderInquiryDetails(inquiryIds) {
   });
 }
 
-
-
 function formatTourDateRange(start, end) {
   const parseLocalDate = (dateStr) => {
     const [year, month, day] = dateStr.split("-").map(Number);
@@ -1260,8 +1241,6 @@ function formatTourDateRange(start, end) {
 
   return `${startStr} - ${endStr}, ${endDate.getFullYear()}`;
 }
-
-
 
 // サムネ優先URL
 function pickAttachmentUrl(att) {
@@ -1681,3 +1660,5 @@ function waitImagesLoaded(scope) {
   });
   return Promise.all(jobs);
 }
+
+alert('test')
