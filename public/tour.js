@@ -1676,16 +1676,17 @@ if (window.location.pathname.includes('/contact')) {
         return;
       }
 
-      // 先頭のTourデータを取得
       const tourName = tours.records[0]?.fields?.Name || '';
-      console.log('Tour Name:', tourName);
+      const tourNumber = tours.records[0]?.fields?.['Tour Number'] || '';
 
-      // id="name" の input にセット
-      const input = document.querySelector('#name');
-      if (input) {
-        input.value = tourName;
-      } else {
-        console.warn('input#name が見つかりません');
+      const name = document.querySelector('#name');
+      if (name) {
+        name.value = tourName;
+      }
+
+      const email = document.querySelector('#email');
+      if (email) {
+        email.value = tourNumber;
       }
     } catch (err) {
       console.error('Tour取得エラー:', err);
