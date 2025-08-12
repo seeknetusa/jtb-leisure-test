@@ -1663,6 +1663,16 @@ function waitImagesLoaded(scope) {
 
 // ページのURLに /contact が含まれる場合のみ実行
 if (window.location.pathname.includes('/contact')) {
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const tid = urlParams.get('tid');
+
+  const Tour = await fetchTour(recordId);
+  console.log('Tour', Tour);
+  
   // 実行したい処理
   console.log('Contactページなのでスクリプトを実行します');
+
+
+
 }
