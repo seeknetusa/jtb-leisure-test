@@ -1667,7 +1667,7 @@ if (window.location.pathname.includes('/contact')) {
   const urlParams = new URLSearchParams(window.location.search);
   const tid = urlParams.get('tid');
 
-  const Tour = fetchTour(recordId);
+  const Tour = fetchTour(tid);
   console.log('Tour', Tour);
 
   // 実行したい処理
