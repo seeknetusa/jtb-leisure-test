@@ -1661,4 +1661,8 @@ function waitImagesLoaded(scope) {
   return Promise.all(jobs);
 }
 
-alert('test')
+// ページのURLに /contact が含まれる場合のみ実行
+if (window.location.pathname.includes('/contact')) {
+  // 実行したい処理
+  console.log('Contactページなのでスクリプトを実行します');
+}
