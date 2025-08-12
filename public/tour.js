@@ -1661,25 +1661,33 @@ function waitImagesLoaded(scope) {
   return Promise.all(jobs);
 }
 
-// /contact を含むページだけ実行
 if (window.location.pathname.includes('/contact')) {
   (async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tid = urlParams.get('tid');
+    if (!tid) return;
+
     try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const tid = urlParams.get('tid');
-      if (!tid) {
-        console.warn('tid が見つかりません');
+      const tours = await fetchTour(tid); // tours は配列
+      if (!Array.isArray(tours) || tours.length === 0) {
+        console.warn('Tour データがありません');
         return;
       }
 
-      // fetchTour は Promise を返す想定
-      const tour = await fetchTour(tid);
-      console.log('Tour', tour);
+      // 先頭のTourデータを取得
+      const tourName = tours[0]?.fields?.Name || '';
+      console.log('Tour Name:', tourName);
 
-      // Contact ページ用の処理
-      console.log('Contactページなのでスクリプトを実行します');
+      // id="name" の input にセット
+      const input = document.querySelector('#name');
+      if (input) {
+        input.value = tourName;
+      } else {
+        console.warn('input#name が見つかりません');
+      }
     } catch (err) {
-      console.error('Tour の取得に失敗:', err);
+      console.error('Tour取得エラー:', err);
     }
   })();
 }
+
