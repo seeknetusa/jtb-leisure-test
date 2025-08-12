@@ -1670,14 +1670,14 @@ if (window.location.pathname.includes('/contact')) {
     try {
       const tours = await fetchTour(tid); // tours は配列
 
-      console.log('tours:', tours);
-      if (!Array.isArray(tours) || tours.length === 0) {
+      console.log('tours:', tours.records);
+      if (!Array.isArray(tours.records) || tours.records.length === 0) {
         console.warn('Tour データがありません');
         return;
       }
 
       // 先頭のTourデータを取得
-      const tourName = tours[0]?.fields?.Name || '';
+      const tourName = tours.records[0]?.fields?.Name || '';
       console.log('Tour Name:', tourName);
 
       // id="name" の input にセット
