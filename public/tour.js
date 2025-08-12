@@ -1661,18 +1661,25 @@ function waitImagesLoaded(scope) {
   return Promise.all(jobs);
 }
 
-// ページのURLに /contact が含まれる場合のみ実行
+// /contact を含むページだけ実行
 if (window.location.pathname.includes('/contact')) {
+  (async () => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tid = urlParams.get('tid');
+      if (!tid) {
+        console.warn('tid が見つかりません');
+        return;
+      }
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const tid = urlParams.get('tid');
+      // fetchTour は Promise を返す想定
+      const tour = await fetchTour(tid);
+      console.log('Tour', tour);
 
-  const Tour = fetchTour(tid);
-  console.log('Tour', Tour);
-
-  // 実行したい処理
-  console.log('Contactページなのでスクリプトを実行します');
-
-
-
+      // Contact ページ用の処理
+      console.log('Contactページなのでスクリプトを実行します');
+    } catch (err) {
+      console.error('Tour の取得に失敗:', err);
+    }
+  })();
 }
