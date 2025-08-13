@@ -1467,6 +1467,13 @@ async function renderTourItinerary(itineraryIds = [], tableNumber = 2) {
     setField(".transportaion", trspText);
     setField(".note", noteText);
 
+    // すべての補足項目が空なら day-additional 全体を非表示
+    const hasAdditionalInfo = [accText, mealText, trspText, noteText].some(val => String(val || "").trim());
+    const additionalWrap = node.querySelector(".day-additional");
+    if (additionalWrap) {
+      additionalWrap.style.display = hasAdditionalInfo ? "" : "none";
+    }
+
     section.appendChild(node);
   }
 }
