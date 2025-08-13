@@ -1376,6 +1376,104 @@ async function renderFeatureAndRemarks(fields, remarksTableNumber = 2) {
  * @param {string[]} itineraryIds  Tour.fields.Itinerary の ID 配列
  * @param {number} tableNumber     Itinerary テーブル番号（例: 2）※実環境に合わせて
  */
+
+async function renderTourItinerary(itineraryIds = [], tableNumber = 2) {
+  if (!Array.isArray(itineraryIds) || itineraryIds.length === 0) return;
+
+  let records = await fetchByRecordIds(tableNumber, itineraryIds);
+  records.sort((a, b) => {
+    const da = Number(a?.fields?.Day ?? Infinity);
+    const db = Number(b?.fields?.Day ?? Infinity);
+    return da - db;
+  });
+
+  const section = document.querySelector(".tour-itinerary");
+  if (!section) return;
+
+  let dayTpl = section.querySelector(".day.day-template");
+  if (!dayTpl) return;
+
+  dayTpl.hidden = true; // テンプレート自体は非表示のまま
+
+  // 既存の .day（テンプレート以外）を削除
+  section.querySelectorAll(".day:not(.day-template)").forEach(el => el.remove());
+
+  for (const rec of records) {
+    const f = rec.fields || {};
+    const node = dayTpl.cloneNode(true);
+    node.classList.remove("day-template");
+    node.hidden = false;
+
+    const dayNum = f.Day != null ? String(f.Day) : "";
+    const title = f.Title || f.Name || "";
+    const detail = f.Details || "";
+
+    const accText = f.Accommodation || "";
+    const mealText = f.Meal || f.Meals || "";
+    const trspText = f.Transportaion || f.Transportation || "";
+    const noteText = f.Note || f.Notes || "";
+
+    const images =
+      f["Itinerary Images"] || f.Images || f.Image || [];
+    const imageList = Array.isArray(images) ? images : [];
+
+    // 見出し
+    const h3 = node.querySelector(".day-content h3");
+    if (h3) {
+      h3.textContent = `DAY ${dayNum}${title ? ` ${title}` : ""}`;
+    }
+
+    // 詳細
+    const descP = node.querySelector(".day-content p");
+    if (descP) {
+      descP.innerHTML = String(detail).replace(/\r?\n/g, "<br>");
+    }
+
+    // 画像
+    const picsContainer = node.querySelector(".day-pics");
+    if (picsContainer) {
+      picsContainer.innerHTML = ""; // 既存クリア
+      imageList.forEach(att => {
+        const url = pickAttachmentUrl(att);
+        const alt = att?.filename ? fileNameWithoutExt(att.filename) : "";
+        if (url) {
+          const fig = document.createElement("figure");
+          fig.className = "day-pic";
+          fig.innerHTML = `
+            <img src="${url}" alt="${alt}" loading="lazy">
+            <figcaption>${alt}</figcaption>
+          `;
+          picsContainer.appendChild(fig);
+        }
+      });
+    }
+
+    // 補足項目差し込み
+    const setField = (selector, content, fallbackSelector = "p") => {
+      const wrap = node.querySelector(selector);
+      if (!wrap) return;
+      const text = String(content || "").trim();
+      if (!text) {
+        wrap.style.display = "none";
+        return;
+      }
+      const p = wrap.querySelector(fallbackSelector);
+      if (p) p.innerHTML = text.replace(/\r?\n/g, "<br>");
+      wrap.style.display = "";
+    };
+
+    setField(".accommodation", accText);
+    setField(".meal", mealText);
+    setField(".transportaion", trspText);
+    setField(".note", noteText);
+
+    section.appendChild(node);
+  }
+}
+
+
+
+/*
 async function renderTourItinerary(itineraryIds = [], tableNumber = 2) {
   if (!Array.isArray(itineraryIds) || itineraryIds.length === 0) return;
 
@@ -1493,6 +1591,8 @@ async function renderTourItinerary(itineraryIds = [], tableNumber = 2) {
     section.appendChild(node);
   });
 }
+*/
+
 
 // 添付1件から最適なURLを取り出す（full -> large -> small -> url）
 function pickAttachmentUrl(att) {
@@ -1661,6 +1761,7 @@ function waitImagesLoaded(scope) {
   return Promise.all(jobs);
 }
 
+// Inquiryページへの初期値セット
 if (window.location.pathname.includes('/contact')) {
   (async () => {
     const urlParams = new URLSearchParams(window.location.search);
