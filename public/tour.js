@@ -1170,9 +1170,15 @@ async function renderTourDetail(recordId) {
       tourNumberEl.textContent = fields["Tour Number"];
     }
     
-
     // ★ Inquiry 情報の描画を追加
     const inquiryIds = fields.Inquiry;
+
+    document.querySelector(".inquiry-btn")?.addEventListener("click", () => {
+      const recordId = Tour?.records?.[0]?.id;
+      if (recordId) {
+        window.location.href = `./contact?tid=${encodeURIComponent(recordId)}`;
+      }
+    });
 
     console.log('fields.Inquiry', fields.Inquiry);
 
@@ -1487,8 +1493,6 @@ async function renderTourItinerary(itineraryIds = [], tableNumber = 2) {
   }
 }
 
-
-
 /*
 async function renderTourItinerary(itineraryIds = [], tableNumber = 2) {
   if (!Array.isArray(itineraryIds) || itineraryIds.length === 0) return;
@@ -1608,7 +1612,6 @@ async function renderTourItinerary(itineraryIds = [], tableNumber = 2) {
   });
 }
 */
-
 
 // 添付1件から最適なURLを取り出す（full -> large -> small -> url）
 function pickAttachmentUrl(att) {
