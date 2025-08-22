@@ -1064,7 +1064,14 @@ async function renderTourDetail(recordId) {
     const fields = Tour?.records?.[0]?.fields;
     if (!fields) return;
 
-    // ① タイトルを <h1> にセット
+    if (fields?.Interest?.length) {
+      const keywordsEl = document.querySelector(".tour-tags .keywords");
+      if (keywordsEl) {
+        keywordsEl.textContent = fields.Interest.join(" | ");
+      }
+    }
+
+    // タイトルを <h1> にセット
     const titleElement = document.querySelector(".tour-header h1");
     if (titleElement && fields.Name) {
       titleElement.textContent = fields.Name;
