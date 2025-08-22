@@ -1080,7 +1080,8 @@ async function renderTourDetail(recordId) {
     // ★ Name (from Style) を pill にセット
     const pillContainer = document.querySelector(".tour-tags .pill");
     if (pillContainer && fields["Name (from Style)"]?.length > 0) {
-      pillContainer.textContent = fields["Name (from Style)"][0];
+      const rawStyleName = fields["Name (from Style)"]?.[0] || '';
+      pillContainer.textContent = rawStyleName.replace(/^\d+\.\s*/, '');
     }
 
     const heroImagesContainer = document.querySelector(".hero-images");
@@ -1147,7 +1148,8 @@ async function renderTourDetail(recordId) {
     // ★ サイドバーのタグに Style 名をセット
     const sidebarTag = document.querySelector(".sidebar .tag");
     if (sidebarTag && fields["Name (from Style)"]?.length > 0) {
-      sidebarTag.textContent = fields["Name (from Style)"][0];
+      const rawStyleName = fields["Name (from Style)"]?.[0] || '';
+      sidebarTag.textContent = rawStyleName.replace(/^\d+\.\s*/, '');
     }
     
     // ★ サイドバーの Day/Night 情報をセット
