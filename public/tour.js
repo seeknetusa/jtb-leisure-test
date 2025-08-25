@@ -875,8 +875,10 @@ async function fetchRecommendedTours(containerId) {
     // URLクエリパラメータの取得
     // -----------------------------
     const urlParams = new URLSearchParams(window.location.search);
-    const recordId = urlParams.get('id');
+    const recordId = urlParams.get('tid');
     const recordDestination = urlParams.get('destination');
+
+    console.log('recordId', recordId);
 
     let encodedDestinations;
     let encodedKeyword;
