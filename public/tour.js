@@ -1,4 +1,4 @@
-const apiBaseUrl = "https://jtb-leisure-test.vercel.app/api/airtable-proxy";
+const apiBaseUrl = "https://jtb-leisure.vercel.app/api/airtable-proxy";
 const pageSize = 6;
 let currentPage = 1;
 let totalPages = 0;
@@ -878,15 +878,17 @@ async function fetchRecommendedTours(containerId) {
     const recordId = urlParams.get('tid');
     const recordDestination = urlParams.get('destination');
 
-    console.log('recordId', recordId);
-
     let encodedDestinations;
     let encodedKeyword;
 
     // recordIdがある場合、該当ツアーからDestination情報を抽出
     if (recordId) {
       const Tour = await fetchTour(recordId);
-      encodedDestinations = extractUniqueDestinations(Tour.records);
+      //encodedDestinations = extractUniqueDestinations(Tour.records);
+      console.log('Tour', Tour);
+      //console.log('records', Tour.records[0]);
+      styleId = Tour.records[0].fields['ID (from Style)'][0];
+      console.log('styleId', styleId);
     }
 
     // destinationクエリパラメータがある場合はそれを利用
@@ -917,8 +919,9 @@ async function fetchRecommendedTours(containerId) {
 
       // 条件に応じたフィルターパラメータを構築
       if (recordId) {
-        url += `&filterField=${encodeURIComponent("ID (from Style)")}&filterValue=1`;
-        url += `&filterField2=${encodeURIComponent("Destination")}&filterValue2=${encodedDestinations}`;
+        //url += `&filterField=${encodeURIComponent("ID (from Style)")}&filterValue=1`;
+        //url += `&filterField2=${encodeURIComponent("Destination")}&filterValue2=${encodedDestinations}`;
+        url += `&filterField=${encodeURIComponent("ID (from Style)")}&filterValue=${styleId}`;
       } else if (recordDestination) {
         url += `&filterField2=${encodeURIComponent("Destination")}&filterValue2=${encodeURIComponent(encodedDestinations)}`;
       } else if (hiddenDestination) {
@@ -941,21 +944,33 @@ async function fetchRecommendedTours(containerId) {
       }
 
       const data = await res.json();
+
       if (!data.records) {
         console.error("Invalid format received from Airtable");
         return;
       }
 
-      // データを蓄積し、次ページのためのoffset取得
-      all.push(...data.records);
+      if(recordId){
+        // recordId を除外
+        const filtered = data.records.filter(r => r.id !== recordId);
+
+        // データを蓄積し、次ページのためのoffset取得
+        all.push(...filtered);
+      }else{
+        // データを蓄積し、次ページのためのoffset取得
+        all.push(...data.records);
+      }
+
       offset = data.offset;
       done = !offset; // offsetが存在しない＝最後のページ
     }
 
+    const shuffled = shuffleArray(all);
+
     // -----------------------------
     // ツアーカードの描画
     // -----------------------------
-    renderRecommendedCarousel(all, containerId);
+    renderRecommendedCarousel(shuffled, containerId);
 
     // ★ 描画が終わったら自動ループ開始
     //setupReverseLoopScroll(containerId, 4, 4000);
