@@ -7,6 +7,7 @@ let currentSortDirection = 'asc';
 let allData = [];
 let filteredData = [];
 
+
 //const urlParams = new URLSearchParams(window.location.search);
 //const urlType = urlParams.get("style");  // 例: "japan_day_tours"
 const pathParts = window.location.pathname.split('/').filter(Boolean);
