@@ -1200,7 +1200,7 @@ async function renderTourDetail(recordId) {
     document.querySelector(".inquiry-btn")?.addEventListener("click", () => {
       const recordId = Tour?.records?.[0]?.id;
       if (recordId) {
-        switch (Tour?.records?.[0]['ID (from Style)'][0]) {
+        switch (fields['ID (from Style)'][0]) {
           case 3:
           case 5:
             window.location.href = `./custom-tour-inquiry-form?tid=${encodeURIComponent(recordId)}`;
