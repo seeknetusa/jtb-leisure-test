@@ -1200,7 +1200,7 @@ async function renderTourDetail(recordId) {
     document.querySelector(".inquiry-btn")?.addEventListener("click", () => {
       const recordId = Tour?.records?.[0]?.id;
       if (recordId) {
-        switch (Tour?.records?.[0]['ID (from Style)']) {
+        switch (Tour?.records?.[0]['ID (from Style)'][0]) {
           case 3:
           case 5:
             window.location.href = `./custom-tour-inquiry-form?tid=${encodeURIComponent(recordId)}`;
@@ -1832,7 +1832,7 @@ if (window.location.pathname.includes('/custom-tour-inquiry-form')) {
       const tourName = tours.records[0]?.fields?.Name || '';
       const tourNumber = tours.records[0]?.fields?.['Tour Number'] || '';
 
-      const name = document.querySelector('#orm-tour-name');
+      const name = document.querySelector('#form-tour-name');
       if (name) {
         name.value = tourName;
       }
