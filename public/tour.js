@@ -1200,7 +1200,15 @@ async function renderTourDetail(recordId) {
     document.querySelector(".inquiry-btn")?.addEventListener("click", () => {
       const recordId = Tour?.records?.[0]?.id;
       if (recordId) {
-        window.location.href = `./contact?tid=${encodeURIComponent(recordId)}`;
+        switch (Tour?.records?.[0]['ID (from Style)']) {
+          case 3:
+          case 5:
+            window.location.href = `./custom-tour-inquiry-form?tid=${encodeURIComponent(recordId)}`;
+            break;
+          default:
+            window.location.href = `./contact?tid=${encodeURIComponent(recordId)}`;
+        }
+        
       }
     });
 
@@ -1816,9 +1824,6 @@ if (window.location.pathname.includes('/custom-tour-inquiry-form')) {
     try {
       const tours = await fetchTour(tid); // tours は配列
 
-      console.log('tourstours', tours)
-
-      console.log('tours:', tours.records);
       if (!Array.isArray(tours.records) || tours.records.length === 0) {
         console.warn('Tour データがありません');
         return;
@@ -1827,14 +1832,14 @@ if (window.location.pathname.includes('/custom-tour-inquiry-form')) {
       const tourName = tours.records[0]?.fields?.Name || '';
       const tourNumber = tours.records[0]?.fields?.['Tour Number'] || '';
 
-      const name = document.querySelector('#name');
+      const name = document.querySelector('#orm-tour-name');
       if (name) {
         name.value = tourName;
       }
 
-      const email = document.querySelector('#email');
-      if (email) {
-        email.value = tourNumber;
+      const tourcode = document.querySelector('#form-tour-code');
+      if (tourcode) {
+        tourcode.value = tourNumber;
       }
     } catch (err) {
       console.error('Tour取得エラー:', err);
