@@ -1805,10 +1805,14 @@ if (window.location.pathname.includes('/custom-tour-inquiry-form')) {
   (async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const tid = urlParams.get('tid');
+
+    console.log('tid', tid)
     if (!tid) return;
 
     try {
       const tours = await fetchTour(tid); // tours は配列
+
+      console.log('tourstours', tours)
 
       console.log('tours:', tours.records);
       if (!Array.isArray(tours.records) || tours.records.length === 0) {
