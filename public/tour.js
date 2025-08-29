@@ -1798,6 +1798,8 @@ function waitImagesLoaded(scope) {
   return Promise.all(jobs);
 }
 
+console.log('aaaaaaaaaaa')
+console.log(window.location.pathname)
 // Inquiryページへの初期値セット
 if (window.location.pathname.includes('/custom-tour-inquiry-form')) {
   (async () => {
