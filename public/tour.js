@@ -1089,6 +1089,12 @@ async function renderTourDetail(recordId) {
       }
     }
 
+    // パンくずにタイトルをセット
+    const bread = document.getElementById("tour-bread");
+    if (bread && fields.Name) {
+      bread.textContent = fields.Name;
+    }
+
     // タイトルを <h1> にセット
     const titleElement = document.querySelector(".tour-header h1");
     if (titleElement && fields.Name) {
@@ -1798,15 +1804,13 @@ function waitImagesLoaded(scope) {
   return Promise.all(jobs);
 }
 
-console.log('aaaaaaaaaaa')
-console.log(window.location.pathname)
+
 // Inquiryページへの初期値セット
 if (window.location.pathname.includes('/custom-tour-inquiry-form')) {
   (async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const tid = urlParams.get('tid');
 
-    console.log('tid', tid)
     if (!tid) return;
 
     try {
