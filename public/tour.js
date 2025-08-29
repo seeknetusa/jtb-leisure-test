@@ -1799,7 +1799,7 @@ function waitImagesLoaded(scope) {
 }
 
 // Inquiryページへの初期値セット
-if (window.location.pathname.includes('/contact')) {
+if (window.location.pathname.includes('/custom-tour-inquiry-form')) {
   (async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const tid = urlParams.get('tid');
