@@ -32,7 +32,9 @@ async function fetchAndStoreData(withUI = true) {
   let all = [];               // 全レコード格納用
   let offset = null;         // Airtableのページネーション用オフセット
   let done = false;          // データ取得完了フラグ
-
+  
+  const today = normalizeDateOnly(new Date());
+  
   try {
     // Airtable API から全データ取得（ページネーション対応）
     while (!done) {
@@ -52,7 +54,19 @@ async function fetchAndStoreData(withUI = true) {
         return;
       }
 
-      all.push(...data.records);  // レコード追加
+      // ✅ 表示開始日と終了日でフィルタリング
+      const filteredRecords = data.records.filter(record => {
+        const start = record.fields["Display Start Date"];
+        const end = record.fields["Display End Date"];
+    
+        if (!start && !end) return true; // 両方ないなら表示
+        const startDate = start ? normalizeDateOnly(start) : null;
+        const endDate = end ? normalizeDateOnly(end) : null;
+
+        return (!startDate || today >= startDate) && (!endDate || today <= endDate);
+      });
+
+      all.push(...filteredRecords);  // レコード追加
       offset = data.offset;       // 次のページのオフセット
       done = !offset;             // offsetがなければ終了
     }
@@ -77,6 +91,19 @@ async function fetchAndStoreData(withUI = true) {
             typApplied = true;
           }
         });
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const interest = urlParams.get('interest');
+        if(interest){
+          document.querySelectorAll('input[name="interest"]').forEach(input => {
+            const normalizedLabel = input.value.replace(/^\d+\.\s*/, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const normalizedInterest = interest.toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (normalizedLabel === normalizedInterest) {
+              input.checked = true;
+              typApplied = true;
+            }
+          });
+        }
       }
 
       // ✅ フィルターが適用されたかに関係なく描画処理は必ず行う
@@ -763,7 +790,8 @@ function createTourCardElement(record, logoMap) {
   priceEl.innerHTML = priceText || `from <strong>${priceFormatted}</strong> per person`;
 */
   
-  const primary = f["Primary (from Inquiry)"]?.[0] || "";
+  //const primary = f["Primary (from Inquiry)"]?.[0] || "";
+  const primary = f["Inquiry Text (from Inquiry)"]?.[0] || "";
   const parsed = parsePrimaryField(primary);
 
   // 日付差し込み
@@ -1232,29 +1260,44 @@ async function renderInquiryDetails(inquiryIds) {
   inquiryContainer.innerHTML = ""; // 一旦リセット
 
   const records = await fetchByRecordIds(6, inquiryIds); // テーブル番号3: Inquiry
-  const inquiries = sortRecordsByIdOrder(records, inquiryIds)
+
+  const today = normalizeDateOnly(new Date());
+
+  filteredRecords = records.filter(rec => {
+    const f = rec.fields || {};
+
+    const start = f["Display Start Date"];
+    const end = f["Display End Date"];
+
+    const startDate = start ? normalizeDateOnly(start) : null;
+    const endDate = end ? normalizeDateOnly(end) : null;
+
+    return (!startDate || today >= startDate) && (!endDate || today <= endDate);
+  });
+
+  const inquiries = sortRecordsByIdOrder(filteredRecords, inquiryIds)
 
   inquiries.forEach(record => {
     const inf = record.fields;
 
     // --- 日付の整形 ---
     let dateText = "";
-    if (inf["Tour Start Date"] && inf["Tour End Date"]) {
-      dateText = formatTourDateRange(inf["Tour Start Date"], inf["Tour End Date"]);
-    } else if (inf["Tour Date Text"]) {
+    if (inf["Tour Date Text"]) {
       dateText = inf["Tour Date Text"];
+    } else if (inf["Tour Start Date"] && inf["Tour End Date"]) {
+      dateText = formatTourDateRange(inf["Tour Start Date"], inf["Tour End Date"]);
     }
 
     // --- 価格の整形 ---
     let priceText = "";
-    if (inf["Price (Adult)"]) {
+    if (inf["Price Text"]) {
+      priceText = inf["Price Text"];
+    } else if (inf["Price (Adult)"]) {
       const price = Number(inf["Price (Adult)"]).toLocaleString(undefined, {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
       });
       priceText = `from <strong>$${price}</strong> per person`;
-    } else if (inf["Price Text"]) {
-      priceText = inf["Price Text"];
     }
 
     // --- DOM に差し込み ---
@@ -1846,4 +1889,10 @@ if (window.location.pathname.includes('/custom-tour-inquiry-form')) {
     }
   })();
 }
+
+  // 日付だけを比較するために00:00:00にする関数
+  function normalizeDateOnly(dateInput) {
+    const date = new Date(dateInput);
+    return date.toISOString().split("T")[0];  // "YYYY-MM-DD"だけを取得
+  }
 
