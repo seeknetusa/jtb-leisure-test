@@ -2043,4 +2043,109 @@ function getLocalDateString(dateStr, timeZone = 'America/Los_Angeles') {
 */
 
 
+// tour.js（例: /public/tour.js）内
+
+window.lightboxState = {}; // グローバルに管理
+
+window.initLightboxImages = function ({ selector, lightboxClass }) {
+  const containers = document.querySelectorAll(selector);
+  if (!containers.length) return;
+
+  let allImgs = [];
+
+  containers.forEach(box => {
+    const imgs = Array.from(
+      selector === '.hero-images'
+        ? box.children
+        : box.querySelectorAll('img')
+    ).filter(n => n.tagName === 'IMG');
+
+    allImgs.push(...imgs);
+  });
+
+  if (allImgs.length === 0) return;
+
+  if (
+    window.lightboxState[selector] &&
+    window.lightboxState[selector].initialized &&
+    window.lightboxState[selector].prevCount === allImgs.length
+  ) {
+    return;
+  }
+
+  window.lightboxState[selector] = {
+    initialized: true,
+    prevCount: allImgs.length,
+  };
+
+  // Heroバッジ処理
+  if (selector === '.hero-images' && allImgs.length > 5) {
+    const box = document.querySelector(selector);
+    let overlay = box.querySelector('.badge-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.className = 'badge-overlay';
+      const badge = document.createElement('div');
+      badge.className = 'more-badge';
+      overlay.appendChild(badge);
+      box.appendChild(overlay);
+    }
+    overlay.querySelector('.more-badge').textContent = `+${allImgs.length - 5} photos`;
+  }
+
+  // ===== ライトボックス DOM =====
+  let lb = document.querySelector(`.${lightboxClass}`);
+  if (!lb) {
+    lb = document.createElement('div');
+    lb.className = lightboxClass;
+    lb.innerHTML = `
+      <div class="close" aria-label="Close">✕</div>
+      <img alt="">
+      <div class="nav">
+        <div class="btn prev" aria-label="Previous">‹</div>
+        <div class="btn next" aria-label="Next">›</div>
+      </div>
+    `;
+    document.body.appendChild(lb);
+  }
+
+  const lbImg = lb.querySelector('img');
+  const btnPrev = lb.querySelector('.prev');
+  const btnNext = lb.querySelector('.next');
+  const btnClose = lb.querySelector('.close');
+
+  let current = 0;
+
+  function openAt(i) {
+    current = i;
+    show();
+    lb.classList.add('open');
+  }
+
+  function show() {
+    if (current < 0) current = allImgs.length - 1;
+    if (current >= allImgs.length) current = 0;
+    lbImg.src = allImgs[current].src;
+    lbImg.alt = allImgs[current].alt || '';
+  }
+
+  const limit = selector === '.hero-images' ? 5 : allImgs.length;
+
+  allImgs.slice(0, limit).forEach((imgEl, i) => {
+    imgEl.style.cursor = 'zoom-in';
+    imgEl.addEventListener('click', () => openAt(i), { passive: true });
+  });
+
+  btnPrev.addEventListener('click', () => { current--; show(); });
+  btnNext.addEventListener('click', () => { current++; show(); });
+  btnClose.addEventListener('click', () => lb.classList.remove('open'));
+  lb.addEventListener('click', (e) => { if (e.target === lb) lb.classList.remove('open'); });
+
+  document.addEventListener('keydown', (e) => {
+    if (!lb.classList.contains('open')) return;
+    if (e.key === 'Escape') lb.classList.remove('open');
+    if (e.key === 'ArrowLeft') current--, show();
+    if (e.key === 'ArrowRight') current++, show();
+  });
+};
 
