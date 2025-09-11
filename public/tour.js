@@ -6,7 +6,7 @@ let currentSortField = 'Name';
 let currentSortDirection = 'asc';
 let allData = [];
 let filteredData = [];
-
+let isMonthPanelInitialized = false;
 
 //const urlParams = new URLSearchParams(window.location.search);
 //const urlType = urlParams.get("style");  // 例: "japan_day_tours"
@@ -33,8 +33,9 @@ async function fetchAndStoreData(withUI = true) {
   let offset = null;         // Airtableのページネーション用オフセット
   let done = false;          // データ取得完了フラグ
   
-  const today = normalizeDateOnly(new Date());
-  
+  //const today = normalizeDateOnly(new Date());
+  const today = normalizeDateOnly(getTodayInLA()); 
+
   try {
     // Airtable API から全データ取得（ページネーション対応）
     while (!done) {
@@ -54,11 +55,11 @@ async function fetchAndStoreData(withUI = true) {
         return;
       }
 
-      // ✅ 表示開始日と終了日でフィルタリング
+      // 表示開始日と終了日でフィルタリング
       const filteredRecords = data.records.filter(record => {
         const start = record.fields["Display Start Date"];
         const end = record.fields["Display End Date"];
-    
+
         if (!start && !end) return true; // 両方ないなら表示
         const startDate = start ? normalizeDateOnly(start) : null;
         const endDate = end ? normalizeDateOnly(end) : null;
@@ -106,7 +107,7 @@ async function fetchAndStoreData(withUI = true) {
         }
       }
 
-      // ✅ フィルターが適用されたかに関係なく描画処理は必ず行う
+      // フィルターが適用されたかに関係なく描画処理は必ず行う
       if (typApplied) {
         applyFilter(); // チェックボックスがONになっていればフィルターを適用
       } else {
@@ -269,6 +270,21 @@ function generateFilters() {
       tripSlider.noUiSlider.on('change', applyFilter);
     }
   }
+
+  // Filter by Month
+  if (!isMonthPanelInitialized) {
+    document.getElementById('month-picker-panel').addEventListener('click', function (e) {
+      if (e.target.tagName === 'BUTTON') {
+        const selectedYear = e.target.closest('.year-section').querySelector('strong').textContent;
+        const selectedMonth = e.target.textContent.replace('月', '').padStart(2, '0');
+        const fullValue = `${selectedYear}-${selectedMonth}`;
+        document.getElementById('selected-month').value = fullValue;
+        panel.style.display = 'none';
+        applyFilter();
+      }
+    });
+    isMonthPanelInitialized = true;
+  }
 }
 
 // Tourデータに対して現在のフィルター設定を適用する関数
@@ -276,6 +292,9 @@ function applyFilter() {
   const selectedStyles = Array.from(document.querySelectorAll('input[name="style"]:checked')).map(el => el.value.trim());
   const selectedInterests = Array.from(document.querySelectorAll('input[name="interest"]:checked')).map(el => el.value.trim());
   const selectedDestinations = Array.from(document.querySelectorAll('input[name="destination"]:checked')).map(el => el.value.trim());
+  const selectedMonth = document.getElementById('selected-month')?.value?.trim() || '';
+
+  console.log('selectedMonth', selectedMonth);
 
   // noUiSliderからTrip Length（日数）の範囲を取得
   let selectedMinDays = null;
@@ -288,6 +307,7 @@ function applyFilter() {
     selectedMaxDays = parseInt(values[1]);
   }
 
+  console.log('allData', allData);
   // 各フィルター条件を満たすレコードのみ残す
   filteredData = allData.filter(record => {
     const styleField = record.fields["Name (from Style)"] || '';
@@ -331,7 +351,37 @@ function applyFilter() {
       daysMatch = days >= selectedMinDays && days <= selectedMaxDays;
     }
 
-    return styleMatch && interestMatch && destinationMatch && daysMatch;
+    // --- Month フィルター判定 ---
+    let monthMatch = true;
+    const selectedMonth = document.getElementById('selected-month')?.value?.trim() || '';
+
+    if (selectedMonth) {
+      const tourDateArray = record.fields["Tour Date (from Inquiry)"] || [];
+
+      monthMatch = tourDateArray.some(dateRangeStr => {
+        if (!dateRangeStr || typeof dateRangeStr !== 'string') return false;
+
+        // Case 1: : が含まれている（ツアー名付き）
+        if (dateRangeStr.includes(':')) {
+          const [, textPart] = dateRangeStr.split(':');
+          if (textPart && textPart.trim() !== '') {
+            return true; // 右側に値があればマッチ扱い
+          }
+        }
+
+        // Case 2: 通常の "YYYY-MM-DD - YYYY-MM-DD" の形式
+        const [startStr] = dateRangeStr.split(' - ');
+        if (!startStr) return false;
+
+        const isValidDateFormat = /^\d{4}-\d{2}-\d{2}$/.test(startStr);
+        if (!isValidDateFormat) return false;
+
+        return startStr.startsWith(selectedMonth); // 例: "2026-05"
+      });
+    }
+
+    return styleMatch && interestMatch && destinationMatch && daysMatch && monthMatch;
+
   });
 
   // ページをリセットし再描画
@@ -654,6 +704,9 @@ if (clear) {
       .forEach(el => {
         el.checked = false;
       });
+
+    // ✅ 月フィルターをクリア
+    document.getElementById('selected-month').value = '';
 
     // ✅ Trip Length（Days）のmin/maxを全データから再計算
     const dayValues = allData
@@ -1261,7 +1314,8 @@ async function renderInquiryDetails(inquiryIds) {
 
   const records = await fetchByRecordIds(6, inquiryIds); // テーブル番号3: Inquiry
 
-  const today = normalizeDateOnly(new Date());
+  const today = normalizeDateOnly(getTodayInLA()); 
+  //const today = normalizeDateOnly(new Date());
 
   filteredRecords = records.filter(rec => {
     const f = rec.fields || {};
@@ -1890,9 +1944,77 @@ if (window.location.pathname.includes('/custom-tour-inquiry-form')) {
   })();
 }
 
-  // 日付だけを比較するために00:00:00にする関数
-  function normalizeDateOnly(dateInput) {
-    const date = new Date(dateInput);
-    return date.toISOString().split("T")[0];  // "YYYY-MM-DD"だけを取得
+// 日付だけを比較するために00:00:00にする関数
+function normalizeDateOnly(dateInput) {
+  const date = new Date(dateInput);
+  return date.toISOString().split("T")[0];  // "YYYY-MM-DD"だけを取得
+}
+
+function getTodayInLA() {
+  const nowInLA = new Date(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Los_Angeles',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date())
+  );
+  return nowInLA;
+}
+
+const today = getTodayInLA(); // PDT/PSTでの今日の日付（時刻は00:00）
+
+// For Filter by Month
+function getMonthsFor(year) {
+  const current = new Date();
+  const months = [];
+
+  for (let m = 0; m < 12; m++) {
+    const date = new Date(year, m, 1);
+    const label = date.toLocaleString('default', { month: 'short' });
+    const value = `${year}-${String(m + 1).padStart(2, '0')}`;
+    const disabled = date < new Date(current.getFullYear(), current.getMonth(), 1);
+    months.push({ label, value, disabled });
   }
+
+  return months;
+}
+
+// For Filter by Month
+function buildPanel() {
+  const currentYear = new Date().getFullYear();
+  const nextYear = currentYear + 1;
+  panel.innerHTML = '';
+
+  [currentYear, nextYear].forEach(year => {
+    const section = document.createElement('div');
+    section.className = 'year-section';
+    section.innerHTML = `<strong>${year}</strong><br>`;
+    getMonthsFor(year).forEach(({ label, value, disabled }) => {
+      const btn = document.createElement('button');
+      btn.textContent = label;
+      btn.disabled = disabled;
+      btn.onclick = () => {
+        input.value = value;
+        panel.style.display = 'none';
+      };
+      section.appendChild(btn);
+    });
+    panel.appendChild(section);
+  });
+}
+
+/*
+function getLocalDateString(dateStr, timeZone = 'America/Los_Angeles') {
+  const date = new Date(dateStr);
+  if (isNaN(date)) return null; // 無効な日付は無視
+
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+  */
 
