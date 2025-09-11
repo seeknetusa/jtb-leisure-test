@@ -1608,7 +1608,7 @@ async function renderTourItinerary(itineraryIds = [], tableNumber = 2) {
           const fig = document.createElement("figure");
           fig.className = "day-pic";
           fig.innerHTML = `
-            <img src="${url}" alt="${alt}" loading="lazy">
+            <img src="${url}" alt="${alt}" loading="lazy" class="lightbox-itinerary-img">
             <figcaption>${alt}</figcaption>
           `;
           picsContainer.appendChild(fig);
@@ -2040,5 +2040,7 @@ function getLocalDateString(dateStr, timeZone = 'America/Los_Angeles') {
     day: '2-digit',
   }).format(date);
 }
-  */
+*/
+
+
 
