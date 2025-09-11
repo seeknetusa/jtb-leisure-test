@@ -81,29 +81,53 @@ async function fetchAndStoreData(withUI = true) {
       generateFilters();          
       //generateSearchDropdowns(); 
 
+      // URLパラメータによるフィルター初期化
+      const urlParams = new URLSearchParams(window.location.search);
       let typApplied = false;
 
-      if (urlType && !typApplied) {
-        document.querySelectorAll('input[name="style"]').forEach(input => {
+      // --- Interest (interest=name) ---
+      const urlInterest = urlParams.get('interest');
+      if (urlInterest) {
+        document.querySelectorAll('input[name="interest"]').forEach(input => {
           const normalizedLabel = input.value.replace(/^\d+\.\s*/, '').toLowerCase().replace(/[^a-z0-9]/g, '');
-          const normalizedUrlType = urlType.toLowerCase().replace(/[^a-z0-9]/g, '');
-          if (normalizedLabel === normalizedUrlType) {
+          const normalizedUrlInterest = urlInterest.toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (normalizedLabel === normalizedUrlInterest) {
             input.checked = true;
             typApplied = true;
           }
         });
+      }
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const interest = urlParams.get('interest');
-        if(interest){
-          document.querySelectorAll('input[name="interest"]').forEach(input => {
-            const normalizedLabel = input.value.replace(/^\d+\.\s*/, '').toLowerCase().replace(/[^a-z0-9]/g, '');
-            const normalizedInterest = interest.toLowerCase().replace(/[^a-z0-9]/g, '');
-            if (normalizedLabel === normalizedInterest) {
-              input.checked = true;
-              typApplied = true;
-            }
-          });
+      // --- Destination (destination=name) ---
+      const urlDestination = urlParams.get('destination');
+      if (urlDestination) {
+        document.querySelectorAll('input[name="destination"]').forEach(input => {
+          const normalizedLabel = input.value.replace(/^\d+\.\s*/, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          const normalizedUrlDestination = urlDestination.toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (normalizedLabel === normalizedUrlDestination) {
+            input.checked = true;
+            typApplied = true;
+          }
+        });
+      }
+
+      // --- Month (selected-month=YYYY-MM) ---
+      const selectedMonthFromUrl = urlParams.get('selected-month');
+      if (selectedMonthFromUrl) {
+        const selectedMonthInput = document.getElementById('selected-month');
+        if (selectedMonthInput) {
+          selectedMonthInput.value = selectedMonthFromUrl;
+          typApplied = true;
+        }
+      }
+
+      // --- 検索キーワード (keyword=文字列) ---
+      const keywordFromUrl = urlParams.get('keyword');
+      if (keywordFromUrl) {
+        const keywordInput = document.getElementById('search-keyword');
+        if (keywordInput) {
+          keywordInput.value = keywordFromUrl;
+          typApplied = true;
         }
       }
 
@@ -1235,7 +1259,7 @@ async function renderTourDetail(recordId) {
       await renderTourDescriptions(descIds);
     }
 
-    // ★ Itinerary の描画を追加
+    // Itinerary の描画を追加
     const itiIds = fields.Itinerary;
     if (Array.isArray(itiIds) && itiIds.length > 0) {
       await renderTourItinerary(itiIds, 4);
@@ -1244,38 +1268,38 @@ async function renderTourDetail(recordId) {
     // Feature & Remarks を反映
     await renderFeatureAndRemarks(fields, 5);
 
-    // ★ サイドバータイトルに Name をセット
+    // サイドバータイトルに Name をセット
     const sidebarTitle = document.querySelector(".sidebar .title");
     if (sidebarTitle && fields.Name) {
       sidebarTitle.textContent = fields.Name;
     }
 
-    // ★ サイドバーのタグに Style 名をセット
+    // サイドバーのタグに Style 名をセット
     const sidebarTag = document.querySelector(".sidebar .tag");
     if (sidebarTag && fields["Name (from Style)"]?.length > 0) {
       const rawStyleName = fields["Name (from Style)"]?.[0] || '';
       sidebarTag.textContent = rawStyleName.replace(/^\d+\.\s*/, '');
     }
     
-    // ★ サイドバーの Day/Night 情報をセット
+    // サイドバーの Day/Night 情報をセット
     const dayNightElement = document.querySelector(".sidebar .day");
     if (dayNightElement && fields.Days && fields.Nights) {
       dayNightElement.innerHTML = `<strong>${fields.Days}</strong> DAYS <strong>${fields.Nights}</strong> NIGHTS`;
     }
 
-    // ★ 出発地を差し込み
+    // 出発地を差し込み
     const departureCityEl = document.querySelector(".sidebar .departure_city strong");
     if (departureCityEl && fields["Departure City"]) {
       departureCityEl.textContent = fields["Departure City"];
     }
     
-    // ★ ツアーナンバーを差し込み
+    // ツアーナンバーを差し込み
     const tourNumberEl = document.querySelector(".sidebar .tour_number strong");
     if (tourNumberEl && fields["Tour Number"]) {
       tourNumberEl.textContent = fields["Tour Number"];
     }
     
-    // ★ Inquiry 情報の描画を追加
+    // Inquiry 情報の描画を追加
     const inquiryIds = fields.Inquiry;
 
     document.querySelector(".inquiry-btn")?.addEventListener("click", () => {
