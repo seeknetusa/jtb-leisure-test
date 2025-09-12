@@ -2052,7 +2052,7 @@ window.initLightboxImages = function ({ selector, lightboxClass }) {
   if (!containers.length) return;
 
   let allImgs = [];
-
+console.log('selector', selector);
   containers.forEach(box => {
     const imgs = Array.from(
       selector === '.hero-images'
