@@ -1643,6 +1643,8 @@ async function renderTourItinerary(itineraryIds = [], tableNumber = 2) {
     }
 
     section.appendChild(node);
+
+    initLightboxImages({ selector: '.day-pics', lightboxClass: 'lightbox-itinerary' });
   }
 }
 
@@ -2052,7 +2054,7 @@ window.initLightboxImages = function ({ selector, lightboxClass }) {
   if (!containers.length) return;
 
   let allImgs = [];
-console.log('selector', selector);
+
   containers.forEach(box => {
     const imgs = Array.from(
       selector === '.hero-images'
