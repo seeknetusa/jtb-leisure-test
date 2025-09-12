@@ -85,49 +85,60 @@ async function fetchAndStoreData(withUI = true) {
       const urlParams = new URLSearchParams(window.location.search);
       let typApplied = false;
 
-      // --- Interest (interest=name) ---
-      const urlInterest = urlParams.get('interest');
-      if (urlInterest) {
-        document.querySelectorAll('input[name="interest"]').forEach(input => {
+      if (urlType && !typApplied) {
+        document.querySelectorAll('input[name="style"]').forEach(input => {
           const normalizedLabel = input.value.replace(/^\d+\.\s*/, '').toLowerCase().replace(/[^a-z0-9]/g, '');
-          const normalizedUrlInterest = urlInterest.toLowerCase().replace(/[^a-z0-9]/g, '');
-          if (normalizedLabel === normalizedUrlInterest) {
+          const normalizedUrlType = urlType.toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (normalizedLabel === normalizedUrlType) {
             input.checked = true;
             typApplied = true;
           }
         });
-      }
 
-      // --- Destination (destination=name) ---
-      const urlDestination = urlParams.get('destination');
-      if (urlDestination) {
-        document.querySelectorAll('input[name="destination"]').forEach(input => {
-          const normalizedLabel = input.value.replace(/^\d+\.\s*/, '').toLowerCase().replace(/[^a-z0-9]/g, '');
-          const normalizedUrlDestination = urlDestination.toLowerCase().replace(/[^a-z0-9]/g, '');
-          if (normalizedLabel === normalizedUrlDestination) {
-            input.checked = true;
-            typApplied = true;
-          }
-        });
-      }
-
-      // --- Month (selected-month=YYYY-MM) ---
-      const selectedMonthFromUrl = urlParams.get('selected-month');
-      if (selectedMonthFromUrl) {
-        const selectedMonthInput = document.getElementById('selected-month');
-        if (selectedMonthInput) {
-          selectedMonthInput.value = selectedMonthFromUrl;
-          typApplied = true;
+        // --- Interest (interest=name) ---
+        const urlInterest = urlParams.get('interest');
+        if (urlInterest) {
+          document.querySelectorAll('input[name="interest"]').forEach(input => {
+            const normalizedLabel = input.value.replace(/^\d+\.\s*/, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const normalizedUrlInterest = urlInterest.toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (normalizedLabel === normalizedUrlInterest) {
+              input.checked = true;
+              typApplied = true;
+            }
+          });
         }
-      }
 
-      // --- 検索キーワード (keyword=文字列) ---
-      const keywordFromUrl = urlParams.get('keyword');
-      if (keywordFromUrl) {
-        const keywordInput = document.getElementById('search-keyword');
-        if (keywordInput) {
-          keywordInput.value = keywordFromUrl;
-          typApplied = true;
+        // --- Destination (destination=name) ---
+        const urlDestination = urlParams.get('destination');
+        if (urlDestination) {
+          document.querySelectorAll('input[name="destination"]').forEach(input => {
+            const normalizedLabel = input.value.replace(/^\d+\.\s*/, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const normalizedUrlDestination = urlDestination.toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (normalizedLabel === normalizedUrlDestination) {
+              input.checked = true;
+              typApplied = true;
+            }
+          });
+        }
+
+        // --- Month (selected-month=YYYY-MM) ---
+        const selectedMonthFromUrl = urlParams.get('selected-month');
+        if (selectedMonthFromUrl) {
+          const selectedMonthInput = document.getElementById('selected-month');
+          if (selectedMonthInput) {
+            selectedMonthInput.value = selectedMonthFromUrl;
+            typApplied = true;
+          }
+        }
+
+        // --- 検索キーワード (keyword=文字列) ---
+        const keywordFromUrl = urlParams.get('keyword');
+        if (keywordFromUrl) {
+          const keywordInput = document.getElementById('search-keyword');
+          if (keywordInput) {
+            keywordInput.value = keywordFromUrl;
+            typApplied = true;
+          }
         }
       }
 
@@ -399,7 +410,7 @@ function applyFilter() {
 
         const isValidDateFormat = /^\d{4}-\d{2}-\d{2}$/.test(startStr);
         if (!isValidDateFormat) return false;
-
+        
         return startStr.startsWith(selectedMonth); // 例: "2026-05"
       });
     }
