@@ -1225,6 +1225,8 @@ async function renderTourDetail(recordId) {
         img.alt = alt;
         heroImagesContainer.appendChild(img);
       });
+
+      initLightboxImages({ selector: '.hero-images', lightboxClass: 'lightbox' });
     }
 
     const highlightsSection = document.querySelector(".tour-highlights");
@@ -2064,6 +2066,8 @@ window.initLightboxImages = function ({ selector, lightboxClass }) {
 
     allImgs.push(...imgs);
   });
+
+  //console.log('allImgs', allImgs);
 
   if (allImgs.length === 0) return;
 
