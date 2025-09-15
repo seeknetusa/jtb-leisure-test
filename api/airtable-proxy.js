@@ -62,6 +62,8 @@ export default async function handler(req, res) {
     formulas.push(`{Publish}=TRUE()`);
   }
   
+  console.log('TEST');
+
   console.log('tableName2', tableName);
   console.log('filterField2', filterField);
   console.log('filterValue2', filterValue);
