@@ -95,7 +95,7 @@ async function fetchAndStoreData(withUI = true) {
           }
         });
 
-        // --- Interest (interest=name) ---
+        // Interest (interest=name)
         const urlInterest = urlParams.get('interest');
         if (urlInterest) {
           document.querySelectorAll('input[name="interest"]').forEach(input => {
@@ -108,7 +108,7 @@ async function fetchAndStoreData(withUI = true) {
           });
         }
 
-        // --- Destination (destination=name) ---
+        // Destination (destination=name)
         const urlDestination = urlParams.get('destination');
         if (urlDestination) {
           document.querySelectorAll('input[name="destination"]').forEach(input => {
@@ -121,7 +121,7 @@ async function fetchAndStoreData(withUI = true) {
           });
         }
 
-        // --- Month (selected-month=YYYY-MM) ---
+        // Month (selected-month=YYYY-MM)
         const selectedMonthFromUrl = urlParams.get('selected-month');
         if (selectedMonthFromUrl) {
           const selectedMonthInput = document.getElementById('selected-month');
@@ -131,7 +131,7 @@ async function fetchAndStoreData(withUI = true) {
           }
         }
 
-        // --- 検索キーワード (keyword=文字列) ---
+        // 検索キーワード (keyword=文字列)
         const keywordFromUrl = urlParams.get('keyword');
         if (keywordFromUrl) {
           const keywordInput = document.getElementById('search-keyword');
@@ -151,7 +151,7 @@ async function fetchAndStoreData(withUI = true) {
     }
   } catch (e) {
     console.error(e);
-    alert("データ取得に失敗しました");
+    //alert("データ取得に失敗しました");
   }
 }
 
@@ -350,7 +350,7 @@ function applyFilter() {
     const destinationField = record.fields["Destination"] || '';
     const days = record.fields.Days;
 
-    // --- Style フィルター判定 ---
+    // Style フィルター判定
     let styleMatch = false;
     if (selectedStyles.length === 0) {
       styleMatch = true;
@@ -360,7 +360,7 @@ function applyFilter() {
       styleMatch = styleField.some(val => selectedStyles.includes(val.trim()));
     }
 
-    // --- Interest フィルター判定 ---
+    // Interest フィルター判定
     let interestMatch = false;
     if (selectedInterests.length === 0) {
       interestMatch = true;
@@ -370,7 +370,7 @@ function applyFilter() {
       interestMatch = interestField.some(val => selectedInterests.includes(val.trim()));
     }
 
-    // --- Destination フィルター判定 ---
+    // Destination フィルター判定
     let destinationMatch = false;
     if (selectedDestinations.length === 0) {
       destinationMatch = true;
@@ -380,13 +380,13 @@ function applyFilter() {
       destinationMatch = destinationField.some(val => selectedDestinations.includes(val.trim()));
     }
 
-    // --- Trip Length（日数）フィルター判定 ---
+    // Trip Length（日数）フィルター判定
     let daysMatch = false;
     if (typeof days === 'number' && !isNaN(days) && selectedMinDays !== null && selectedMaxDays !== null) {
       daysMatch = days >= selectedMinDays && days <= selectedMaxDays;
     }
 
-    // --- Month フィルター判定 ---
+    // Month フィルター判定
     let monthMatch = true;
     const selectedMonth = document.getElementById('selected-month')?.value?.trim() || '';
 
@@ -475,7 +475,7 @@ function formatDateVerbose(dateStr) {
 
   const day = d.getDate();
 
-  // 日付の序数（1st, 2nd, 3rd, 4th...）を決定する関数
+  // 日付の序数（1st, 2nd, 3rd, 4th...）を決定
   const suffix = (n) => {
     if (n >= 11 && n <= 13) return 'th';
     switch (n % 10) {
@@ -625,7 +625,7 @@ function generateSearchDropdowns() {
     daysSelect.appendChild(option);
   });
 
-  // --- Tour Style の選択に連動して Destination と Days を更新 ---
+  // Tour Style の選択に連動して Destination と Days を更新
   document.getElementById('search-style').addEventListener('change', () => {
     const selectedStyle = document.getElementById('search-style').value;
     const destinationSet = new Set();
@@ -734,16 +734,16 @@ const clear = document.getElementById('clear-filters');
 if (clear) {
   clear.addEventListener('click', () => {
 
-    // ✅ チェックボックス（Style, Interest, Destination）をすべてオフにする
+    // チェックボックス（Style, Interest, Destination）をすべてオフにする
     document.querySelectorAll('#filter-style input, #filter-interest input, #filter-destination input')
       .forEach(el => {
         el.checked = false;
       });
 
-    // ✅ 月フィルターをクリア
+    // 月フィルターをクリア
     document.getElementById('selected-month').value = '';
 
-    // ✅ Trip Length（Days）のmin/maxを全データから再計算
+    // Trip Length（Days）のmin/maxを全データから再計算
     const dayValues = allData
       .map(r => r.fields.Days)
       .filter(v => typeof v === 'number' && !isNaN(v));
@@ -772,10 +772,10 @@ if (clear) {
       }
     }
 
-    // ✅ 検索フォームも初期化
+    // 検索フォームも初期化
     document.getElementById('search-keyword').value = '';
     
-    // ✅ フィルターを再適用
+    // フィルターを再適用
     applyFilter();
   });
 }
@@ -813,9 +813,7 @@ function createTourCardElement(record, logoMap) {
     }
   }
 
-  // -----------------------------
   // メイン画像の設定
-  // -----------------------------
   const images = f.Images || [];
   const imageUrl = (Array.isArray(images) && images.length > 0)
     ? images[0].thumbnails?.full?.url || images[0].url
@@ -824,18 +822,14 @@ function createTourCardElement(record, logoMap) {
   if (imageUrl && imageEl) imageEl.src = imageUrl;
   else if (imageEl) imageEl.remove(); // 画像がなければ要素を削除
 
-  // -----------------------------
   // ロゴ画像の設定（Style参照）
-  // -----------------------------
   const styleId = f["Style"]?.[0];
   const logoUrl = logoMap[styleId] || '';
   const logoEl = clone.querySelector('.tour-logo');
   if (logoUrl && logoEl) logoEl.src = logoUrl;
   else if (logoEl) logoEl.remove(); // ロゴがなければ要素を削除
 
-  // -----------------------------
   // ツアータイトル・スタイル名（番号除去）
-  // -----------------------------
   clone.querySelector('.tour-title').textContent = f.Name || '';
 
   // "1. Something" → "Something" に変換
@@ -844,9 +838,7 @@ function createTourCardElement(record, logoMap) {
   clone.querySelector('.tour-style').textContent = cleanedStyleName;
 
   /*
-  // -----------------------------
   // 日付表示（カスタムテキスト優先）
-  // -----------------------------
   const startDate = f["Tour Start Date (from Inquiry)"]?.[0] || f["Start Date"];
   const endDate = f["Tour End Date (from Inquiry)"]?.[0] || f["End Date"];
   const dateText = f["Tour Date Text (from Inquiry)"]?.[0] || '';
@@ -858,15 +850,11 @@ function createTourCardElement(record, logoMap) {
   }
 */
 
-  // -----------------------------
   // ツアー日数表示
-  // -----------------------------
   clone.querySelector('.tour-length').innerHTML  = `<strong>${f.Days || ''}</strong> DAYS <strong>${f.Nights || ''}</strong> NIGHTS`;
 
   /*
-  // -----------------------------
   // 価格表示（テキスト or 数値）
-  // -----------------------------
   const priceText = f["Price Text (from Inquiry)"]?.[0] || '';
   const priceArray = f["Price (Adult) (from Inquiry)"];
   const raw = Array.isArray(priceArray) && priceArray.length > 0 ? priceArray[0] : '';
@@ -894,9 +882,7 @@ function createTourCardElement(record, logoMap) {
     priceEl.innerHTML = parsed.priceHtml || "";
   }
 
-  // -----------------------------
   // 詳細リンクの設定
-  // -----------------------------
   const linkEl = clone.querySelector('a.btn');
   if (linkEl) {
     const pdfArray = f.PDF;
@@ -942,13 +928,13 @@ function parsePrimaryField(primaryText) {
 
   if (!primaryText || !primaryText.trim()) return result;
 
-  // --- 分割: 価格 : 日付形式（:が含まれるか確認）
+  // 分割: 価格 : 日付形式（:が含まれるか確認）
   const parts = primaryText.split(":").map(p => p.trim());
 
   const pricePart = parts[0] || '';
   const datePart = parts[1] || '';
 
-  // --- 価格の整形
+  // 価格の整形
   if (pricePart.startsWith("$")) {
     const numeric = parseFloat(pricePart.replace(/[^\d.]/g, ''));
     if (!isNaN(numeric)) {
@@ -960,7 +946,7 @@ function parsePrimaryField(primaryText) {
     result.priceHtml = pricePart;
   }
 
-  // --- 日付の整形
+  // 日付の整形
   if (datePart) {
     // "YYYY-MM-DD - YYYY-MM-DD" や "YYYY-MM-DD -" に対応
     const match = datePart.match(/^(\d{4}-\d{2}-\d{2})(?:\s*-\s*(\d{4}-\d{2}-\d{2})?)?$/);
@@ -988,9 +974,7 @@ async function fetchRecommendedTours(containerId) {
   let done = false;
 
   try {
-    // -----------------------------
     // URLクエリパラメータの取得
-    // -----------------------------
     const urlParams = new URLSearchParams(window.location.search);
     const recordId = urlParams.get('tid');
     const recordDestination = urlParams.get('destination');
@@ -1013,9 +997,7 @@ async function fetchRecommendedTours(containerId) {
       encodedDestinations = recordDestination;
     }
 
-    // -----------------------------
     // hidden inputからの取得
-    // -----------------------------
     const hiddenDestinationElement = document.getElementById('destination');
     const hiddenDestination = hiddenDestinationElement ? hiddenDestinationElement.value : null;
     if (hiddenDestination) {
@@ -1028,9 +1010,7 @@ async function fetchRecommendedTours(containerId) {
       encodedKeyword = encodeURIComponent(hiddenkeyword);
     }
 
-    // -----------------------------
     // Airtableからデータをフェッチ（複数ページに対応）
-    // -----------------------------
     while (!done) {
       let url = `${apiBaseUrl}?table=1`;
 
@@ -1084,12 +1064,10 @@ async function fetchRecommendedTours(containerId) {
 
     const shuffled = shuffleArray(all);
 
-    // -----------------------------
     // ツアーカードの描画
-    // -----------------------------
     renderRecommendedCarousel(shuffled, containerId);
 
-    // ★ 描画が終わったら自動ループ開始
+    // 描画が終わったら自動ループ開始
     //setupReverseLoopScroll(containerId, 4, 4000);
     //setupTransformCarousel(containerId, 4, 4000);
     //setupTransformCarouselFallback(containerId, 4, 4000);
@@ -1217,7 +1195,7 @@ async function renderTourDetail(recordId) {
       titleElement.textContent = fields.Name;
     }
 
-    // ★ Name (from Style) を pill にセット
+    // Name (from Style) を pill にセット
     const pillContainer = document.querySelector(".tour-tags .pill");
     if (pillContainer && fields["Name (from Style)"]?.length > 0) {
       const rawStyleName = fields["Name (from Style)"]?.[0] || '';
@@ -1241,49 +1219,67 @@ async function renderTourDetail(recordId) {
     }
 
     const highlightsSection = document.querySelector(".tour-highlights");
+
     if (highlightsSection) {
-      // --- ULリストに Highlights をセット ---
-      const ul = highlightsSection.querySelector("ul");
-      if (ul && fields.Highlights) {
-        // 改行で分割 → <li>要素として追加
-        const lines = fields.Highlights.split(/\r?\n/).filter(line => line.trim() !== "");
-        ul.innerHTML = lines.map(item => `<li>${item}</li>`).join("");
-      }
+      const hasHighlights = fields.Highlights && fields.Highlights.trim() !== "";
+      const hasDescription = fields["Highlights - Description"] && fields["Highlights - Description"].trim() !== "";
+      const hasImage = fields["Highlights - Image"] && fields["Highlights - Image"].length > 0;
 
-      // --- 説明文を <div> に挿入 ---
-      const descriptionDiv = highlightsSection.querySelector("div");
-      if (descriptionDiv && fields["Highlights - Description"]) {
-        descriptionDiv.textContent = fields["Highlights - Description"].replace(/\\\*/g, "*");
-      }
+      // すべて空なら非表示にして終了
+      if (!hasHighlights && !hasDescription && !hasImage) {
+        highlightsSection.style.display = "none";
+      }else{
+        // ULリストに Highlights をセット
+        const ul = highlightsSection.querySelector("ul");
+        if (ul && hasHighlights) {
+          const lines = fields.Highlights.split(/\r?\n/).filter(line => line.trim() !== "");
+          ul.innerHTML = lines.map(item => `<li>${item}</li>`).join("");
+        }
 
-      // --- 地図画像を <img> に挿入 ---
-      const mapImg = highlightsSection.querySelector("img");
-      if (mapImg && fields["Highlights - Image"]?.length > 0) {
-        const imgObj = fields["Highlights - Image"][0];
-        mapImg.src = imgObj.thumbnails?.full?.url || imgObj.url;
-        mapImg.alt = imgObj.filename.replace(/\.[^/.]+$/, "");
+        // 説明文を <div> に挿入
+        const descriptionDiv = highlightsSection.querySelector("div");
+        if (descriptionDiv && hasDescription) {
+          descriptionDiv.textContent = fields["Highlights - Description"].replace(/\\\*/g, "*");
+        }
+
+        // 画像を <img> に挿入
+        const mapImg = highlightsSection.querySelector("img");
+        if (mapImg && hasImage) {
+          const imgObj = fields["Highlights - Image"][0];
+          mapImg.src = imgObj.thumbnails?.full?.url || imgObj.url;
+          mapImg.alt = imgObj.filename.replace(/\.[^/.]+$/, "");
+        }
       }
     }
 
     const descIds = fields.Description;
     if (Array.isArray(descIds) && descIds.length > 0) {
-      console.log('descIds', descIds);
-
       await renderTourDescriptions(descIds);
+    }else{
+      document.querySelector(".description-section").style.display = "none";
     }
 
     // Itinerary の描画を追加
     const itiIds = fields.Itinerary;
     if (Array.isArray(itiIds) && itiIds.length > 0) {
       await renderTourItinerary(itiIds, 4);
+    }else{
+      document.querySelector(".tour-itinerary").style.display = "none";
     }
 
     // Feature & Remarks を反映
+    const hasFeatureDepartureDate = fields["Feature - Departure Date"] && fields["Feature - Departure Date"].trim() !== "";
+    const hasFeatureTypeOfTravelArrangement = fields["Feature - Type of travel arrangement"] && fields["Feature - Type of travel arrangement"].trim() !== "";
+    if (!hasFeatureDepartureDate && !hasFeatureTypeOfTravelArrangement) {
+      document.querySelector(".feature").style.display = "none";
+    }
     await renderFeatureAndRemarks(fields, 5);
 
     const featureIds = fields.Features;
     if (Array.isArray(featureIds) && featureIds.length > 0) {
       await renderTourFeatures(featureIds);
+    }else{
+      document.querySelector(".features-section").style.display = "none";
     }
 
     // サイドバータイトルに Name をセット
@@ -1376,7 +1372,7 @@ async function renderInquiryDetails(inquiryIds) {
   inquiries.forEach(record => {
     const inf = record.fields;
 
-    // --- 日付の整形 ---
+    // 日付の整形
     let dateText = "";
     if (inf["Tour Date Text"]) {
       dateText = inf["Tour Date Text"];
@@ -1384,7 +1380,7 @@ async function renderInquiryDetails(inquiryIds) {
       dateText = formatTourDateRange(inf["Tour Start Date"], inf["Tour End Date"]);
     }
 
-    // --- 価格の整形 ---
+    // 価格の整形
     let priceText = "";
     if (inf["Price Text"]) {
       priceText = inf["Price Text"];
@@ -1396,7 +1392,7 @@ async function renderInquiryDetails(inquiryIds) {
       priceText = `from <strong>$${price}</strong> per person`;
     }
 
-    // --- DOM に差し込み ---
+    // DOM に差し込み
     inquiryContainer.innerHTML += `
       <p class="tour_date">${dateText}</p>
       <p class="tour_price">${priceText}</p>
@@ -1440,7 +1436,7 @@ function fileNameWithoutExt(name = "") {
   return String(name).replace(/\.[^/.]+$/, "");
 }
 
-// ---- 共通: RECORD_ID() + カンマ区切りでまとめ取得（vercel proxy仕様）----
+// 共通: RECORD_ID() + カンマ区切りでまとめ取得（vercel proxy仕様）
 async function fetchByRecordIds(tableNumber, ids = []) {
   if (!Array.isArray(ids) || ids.length === 0) return [];
   const idParam = encodeURIComponent(ids.join(','));
@@ -1472,7 +1468,7 @@ async function fetchByRecordIds(tableNumber, ids = []) {
  * @param {number} remarksTableNumber - Remarks テーブル番号（例: 4）※実環境に合わせて
  */
 async function renderFeatureAndRemarks(fields, remarksTableNumber = 2) {
-  // -------- Feature --------
+  // Feature
   const featureSection = document.querySelector('.feature');
   if (featureSection) {
     const depWrap = featureSection.querySelector('.departure_date');
@@ -1504,7 +1500,7 @@ async function renderFeatureAndRemarks(fields, remarksTableNumber = 2) {
     }
   }
 
-  // -------- Remarks --------
+  // Remarks
   const remarksSection = document.querySelector('.remarks');
   if (!remarksSection) return;
 
@@ -1666,126 +1662,6 @@ async function renderTourItinerary(itineraryIds = [], tableNumber = 2) {
   }
 }
 
-/*
-async function renderTourItinerary(itineraryIds = [], tableNumber = 2) {
-  if (!Array.isArray(itineraryIds) || itineraryIds.length === 0) return;
-
-  // 取得 → Day 昇順
-  let records = await fetchByRecordIds(tableNumber, itineraryIds);
-  records.sort((a, b) => {
-    const da = Number(a?.fields?.Day ?? Infinity);
-    const db = Number(b?.fields?.Day ?? Infinity);
-    return da - db;
-  });
-
-  const section = document.querySelector(".tour-itinerary");
-  if (!section) return;
-
-  // ---- .day テンプレを確保（最初の1つをひな形化）----
-  let dayTpl = section.querySelector(".day.day-template");
-  if (!dayTpl) {
-    dayTpl = section.querySelector(".day");
-    if (!dayTpl) {
-      // 万一 .day が無ければ、骨組みを作る（保険）
-      dayTpl = document.createElement("div");
-      dayTpl.className = "day";
-      dayTpl.innerHTML = `
-        <h3></h3>
-        <p></p>
-        <img src="" alt="">
-        <div class="accommodation">ACCOMMODATION:<p></p></div>
-        <div class="meal">MEAL:<p></p></div>
-        <div class="transportaion">Transportaion:<p></p></div>
-        <div class="note">Note:<p></p></div>`;
-      section.appendChild(dayTpl);
-    }
-    dayTpl.classList.add("day-template");
-    dayTpl.hidden = true;
-  }
-
-  // ---- 既存の出力（テンプレ以外の .day）を削除 ----
-  Array.from(section.querySelectorAll(".day:not(.day-template)")).forEach(n => n.remove());
-
-  // ---- 差し込み ----
-  records.forEach(rec => {
-    const f = rec.fields || {};
-
-    const dayNum = f.Day != null ? String(f.Day) : "";
-    const title  = f.Title || f.Name || "";
-    const detail = f.Details || "";
-
-    // 画像（Images / Image / Itinerary Images のいずれか）
-    const imageArray =
-      (Array.isArray(f.Images) && f.Images.length ? f.Images : null) ||
-      (Array.isArray(f.Image) && f.Image.length ? f.Image : null) ||
-      (Array.isArray(f["Itinerary Images"]) && f["Itinerary Images"].length ? f["Itinerary Images"] : null) ||
-      [];
-    const att    = imageArray[0];
-    const imgUrl = pickAttachmentUrl(att);
-    const imgAlt = att?.filename ? fileNameWithoutExt(att.filename) : (dayNum ? `Day ${dayNum}` : "Itinerary");
-
-    // 付帯情報
-    const accText  = f.Accommodation || f["Accommodation"] || "";
-    const mealText = f.Meal || f["Meals"] || "";
-    const trspText = f.Transportaion || f.Transportation || f["Transportaion"] || f["Transportation"] || "";
-    const noteText = f.Note || f.Notes || "";
-
-    // テンプレ複製
-    const node = dayTpl.cloneNode(true);
-    node.classList.remove("day-template");
-    node.hidden = false;
-
-    // 見出し
-    const h3 = node.querySelector("h3");
-    if (h3) h3.textContent = `Day ${dayNum}${title ? `: ${title}` : ""}`;
-
-    // 本文（Detail）
-    const p = node.querySelector(":scope > p");
-
-    if (p) {
-      // 改行を活かすなら： p.innerHTML = String(detail).replace(/\r?\n/g, "<br>");
-      p.textContent = detail;
-    }
-
-    // 画像
-    const img = node.querySelector(":scope > img");
-    if (imgUrl && img) {
-      img.src = imgUrl;
-      img.alt = imgAlt;
-      img.loading = "lazy";
-    } else if (img) {
-      img.remove(); // 画像が無ければ削除
-    }
-
-    // テキストを <div> 内の <p> に差し込むヘルパー
-    const setInfo = (selector, text) => {
-      const wrap = node.querySelector(selector);
-      if (!wrap) return;
-      const content = String(text || "").trim();
-      if (!content) {
-        // 中身が空なら、そのブロックごと非表示
-        wrap.style.display = "none";
-        return;
-      }
-      const pp = wrap.querySelector("p");
-      if (pp) {
-        // 改行は <br> に
-        pp.innerHTML = content.replace(/\r?\n/g, "<br>");
-      }
-      wrap.style.display = ""; // 念のため表示
-    };
-
-    // 付帯情報差し込み（.day の内側）
-    setInfo(".accommodation",  accText);
-    setInfo(".meal",           mealText);
-    setInfo(".transportaion",  trspText); // クラス名はご提示の綴りに合わせています
-    setInfo(".note",           noteText);
-
-    section.appendChild(node);
-  });
-}
-*/
-
 // 添付1件から最適なURLを取り出す（full -> large -> small -> url）
 function pickAttachmentUrl(att) {
   if (!att) return "";
@@ -1860,7 +1736,7 @@ async function renderTourDescriptions(descriptionIds) {
   const section = document.querySelector(".description-section");
   if (!section) return;
 
-  // --- テンプレ確保（最初の .description-block を雛形化）---
+  // テンプレ確保（最初の .description-block を雛形化）
   let template = section.querySelector(".description-block.description-template");
   if (!template) {
     template = section.querySelector(".description-block");
@@ -1883,7 +1759,7 @@ async function renderTourDescriptions(descriptionIds) {
   // 既存のテンプレ以外の description-block を削除（毎回作り直し）
   Array.from(section.querySelectorAll(".description-block:not(.description-template)")).forEach(n => n.remove());
 
-  // --- ブロック差し込み ---
+  // ブロック差し込み
   blocks.forEach(record => {
     const f = record.fields || {};
 
@@ -1948,7 +1824,7 @@ async function renderTourFeatures(featureIds) {
   const section = document.querySelector(".features-section");
   if (!section) return;
 
-  // --- テンプレ確保（最初の .features-block を雛形化）---
+  // テンプレ確保（最初の .features-block を雛形化）
   let template = section.querySelector(".features-block.features-template");
   if (!template) {
     template = section.querySelector(".features-block");
@@ -1968,7 +1844,7 @@ async function renderTourFeatures(featureIds) {
   // テンプレ以外を削除
   Array.from(section.querySelectorAll(".features-block:not(.features-template)")).forEach(n => n.remove());
 
-  // --- ブロック差し込み ---
+  // ブロック差し込み
   blocks.forEach(record => {
     const f = record.fields || {};
     const title = f.Name || "";
@@ -2147,11 +2023,7 @@ function getLocalDateString(dateStr, timeZone = 'America/Los_Angeles') {
 }
 */
 
-
-// tour.js（例: /public/tour.js）内
-
 window.lightboxState = {}; // グローバルに管理
-
 window.initLightboxImages = function ({ selector, lightboxClass }) {
   const containers = document.querySelectorAll(selector);
   if (!containers.length) return;
@@ -2200,7 +2072,7 @@ window.initLightboxImages = function ({ selector, lightboxClass }) {
     overlay.querySelector('.more-badge').textContent = `+${allImgs.length - 5} photos`;
   }
 
-  // ===== ライトボックス DOM =====
+  // ライトボックス DOM
   let lb = document.querySelector(`.${lightboxClass}`);
   if (!lb) {
     lb = document.createElement('div');
