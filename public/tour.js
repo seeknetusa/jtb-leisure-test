@@ -410,7 +410,7 @@ function applyFilter() {
 
         const isValidDateFormat = /^\d{4}-\d{2}-\d{2}$/.test(startStr);
         if (!isValidDateFormat) return false;
-        
+
         return startStr.startsWith(selectedMonth); // 例: "2026-05"
       });
     }
@@ -1281,6 +1281,11 @@ async function renderTourDetail(recordId) {
     // Feature & Remarks を反映
     await renderFeatureAndRemarks(fields, 5);
 
+    const featureIds = fields.Features;
+    if (Array.isArray(featureIds) && featureIds.length > 0) {
+      await renderTourFeatures(featureIds);
+    }
+
     // サイドバータイトルに Name をセット
     const sidebarTitle = document.querySelector(".sidebar .title");
     if (sidebarTitle && fields.Name) {
@@ -1793,7 +1798,6 @@ function fileNameWithoutExt(name = "") {
   return String(name).replace(/\.[^/.]+$/, "");
 }
 
-// ← 'sync function' ではなく async に修正
 async function fetchDescriptionBlocks(descriptionIds) {
   if (!Array.isArray(descriptionIds) || descriptionIds.length === 0) return [];
 
@@ -1819,6 +1823,35 @@ async function fetchDescriptionBlocks(descriptionIds) {
 
   // ID順に並べ替え（descIdsの順序を尊重）
   all.sort((a, b) => descriptionIds.indexOf(a.id) - descriptionIds.indexOf(b.id));
+  return all;
+}
+
+async function fetchFeaturesBlocks(featureIds) {
+  if (!Array.isArray(featureIds) || featureIds.length === 0) return [];
+
+  // カンマ区切りをまとめてエンコード
+  const idParam = encodeURIComponent(featureIds.join(","));
+
+  let all = [];
+  let offset = null;
+  let guard = 0;
+
+  do {
+    const url = `${apiBaseUrl}?table=7&filterField=RECORD_ID()&filterValue=${idParam}` + (offset ? `&offset=${offset}` : "");
+    console.log('url', url);
+
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.error("Failed to fetch features");
+      return [];
+    }
+    const data = await res.json();
+    all.push(...(data.records || []));
+    offset = data.offset;
+    guard++;
+  } while (offset && guard < 50);
+
+  all.sort((a, b) => featureIds.indexOf(a.id) - featureIds.indexOf(b.id));
   return all;
 }
 
@@ -1904,6 +1937,63 @@ async function renderTourDescriptions(descriptionIds) {
         textDiv.appendChild(p);
       });
     }
+
+    section.appendChild(node);
+  });
+}
+
+async function renderTourFeatures(featureIds) {
+  const blocks = await fetchFeaturesBlocks(featureIds);
+
+  const section = document.querySelector(".features-section");
+  if (!section) return;
+
+  // --- テンプレ確保（最初の .features-block を雛形化）---
+  let template = section.querySelector(".features-block.features-template");
+  if (!template) {
+    template = section.querySelector(".features-block");
+    if (!template) {
+      // スケルトンが無い場合は生成
+      template = document.createElement("div");
+      template.className = "features-block";
+      template.innerHTML = `
+        <strong></strong>
+        <p></p>`;
+      section.appendChild(template);
+    }
+    template.classList.add("features-template");
+    template.hidden = true;
+  }
+
+  // テンプレ以外を削除
+  Array.from(section.querySelectorAll(".features-block:not(.features-template)")).forEach(n => n.remove());
+
+  // --- ブロック差し込み ---
+  blocks.forEach(record => {
+    const f = record.fields || {};
+    const title = f.Name || "";
+    const contentRaw = f.Content || "";
+    const lines = String(contentRaw).split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+
+    // テンプレ複製
+    const node = template.cloneNode(true);
+    node.classList.remove("features-template");
+    node.hidden = false;
+
+    // <strong> タイトル差し込み
+    const strong = node.querySelector("strong");
+    console.log('strong', strong)
+    if (strong) strong.textContent = title;
+
+    // <p> 差し替え（複数行対応）
+    const firstP = node.querySelector("p");
+    if (firstP) firstP.remove(); // 最初のダミーを削除
+
+    lines.forEach(line => {
+      const p = document.createElement("p");
+      p.textContent = line.replace(/\\\*/g, "*"); // \* → *
+      node.appendChild(p);
+    });
 
     section.appendChild(node);
   });

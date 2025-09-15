@@ -61,8 +61,6 @@ export default async function handler(req, res) {
   if (tableName === 'Tour') {
     formulas.push(`{Publish}=TRUE()`);
   }
-  
-  console.log('TEST');
 
   console.log('tableName2', tableName);
   console.log('filterField2', filterField);
