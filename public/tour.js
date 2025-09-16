@@ -1,5 +1,5 @@
 const apiBaseUrl = "https://jtb-leisure.vercel.app/api/airtable-proxy";
-const pageSize = 6;
+const pageSize = 12;
 let currentPage = 1;
 let totalPages = 0;
 let currentSortField = 'Name';
