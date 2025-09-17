@@ -851,7 +851,11 @@ function createTourCardElement(record, logoMap) {
 */
 
   // ツアー日数表示
-  clone.querySelector('.tour-length').innerHTML  = `<strong>${f.Days || ''}</strong> DAYS <strong>${f.Nights || ''}</strong> NIGHTS`;
+  clone.querySelector('.tour-length').innerHTML = `
+    <strong>${f.Days || ''}</strong> DAYS
+    ${f.Nights ? `<strong>${f.Nights}</strong> NIGHTS` : ''}
+  `;
+
 
   /*
   // 価格表示（テキスト or 数値）
