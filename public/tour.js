@@ -1178,7 +1178,10 @@ async function renderTourDetail(recordId) {
     console.log('Tour', Tour);
     
     const fields = Tour?.records?.[0]?.fields;
-    if (!fields) return;
+    if (!fields) {
+      window.location.href = "/404notfound";
+      return;
+    }
 
     if (fields?.Interest?.length) {
       const keywordsEl = document.querySelector(".tour-tags .keywords");
