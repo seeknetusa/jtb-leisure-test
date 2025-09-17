@@ -12,7 +12,7 @@ let isMonthPanelInitialized = false;
 //const urlType = urlParams.get("style");  // 例: "japan_day_tours"
 const pathParts = window.location.pathname.split('/').filter(Boolean);
 let urlType = pathParts[pathParts.length - 1];  // 最後の部分だけ抽出（例: "tailor-made-tours"）
-if(urlType == 'japan-tours' || urlType == 'airtable5.html') urlType = '';
+//if(urlType == 'japan-tours' || urlType == 'airtable5.html') urlType = '';
 
 //console.log('pathParts', pathParts[pathParts.length - 1]);
 //console.log('urlType', urlType);
