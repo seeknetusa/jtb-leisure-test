@@ -1483,7 +1483,8 @@ async function renderFeatureAndRemarks(fields, remarksTableNumber = 2) {
     if (depP) {
       const depText = fields["Feature - Departure Date"] || "";
       if (String(depText).trim()) {
-        depP.textContent = depText;
+        //depP.textContent = formatLongText(depText);
+        depP.innerHTML = formatLongText(depText);
         depWrap.style.display = "";
       } else {
         // 空ならブロックごと非表示（常に見せたいならこの行を外す）
@@ -1987,6 +1988,11 @@ function getMonthsFor(year) {
   }
 
   return months;
+}
+
+function formatLongText(text) {
+  if (!text) return "";
+  return text.replace(/\n/g, "<br>");
 }
 
 // For Filter by Month
