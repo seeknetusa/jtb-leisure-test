@@ -22,6 +22,75 @@ let minDays = 1;
 let maxDays = 30; 
 let urlTypeCheckedSet = false; // グローバルに一度だけ適用するためのフラグ
 
+// トップページ検索ボックス
+function populateSearchDropdownsFromTourData() {
+  const styleMap = new Map(); // key: "1. Tailor-made Tours", value: "Tailor-made Tours"
+  const interestSet = new Set();
+  const destinationSet = new Set();
+
+  filteredData.forEach(record => {
+    const styleField = record.fields["Name (from Style)"];
+    const interestField = record.fields["Interest"];
+    const destinationField = record.fields["Destination"];
+
+    // Style
+    if (Array.isArray(styleField)) {
+      styleField.forEach(s => {
+        const trimmed = s.trim();
+        const label = trimmed.replace(/^\d+\.\s*/, ''); // remove leading number and dot
+        styleMap.set(trimmed, label);
+      });
+    } else if (typeof styleField === 'string') {
+      styleField.split(',').forEach(s => {
+        const trimmed = s.trim();
+        const label = trimmed.replace(/^\d+\.\s*/, '');
+        styleMap.set(trimmed, label);
+      });
+    }
+
+    // Interest
+    if (typeof interestField === 'string') {
+      interestSet.add(interestField.trim());
+    } else if (Array.isArray(interestField)) {
+      interestField.forEach(val => interestSet.add(val.trim()));
+    }
+
+    // Destination
+    if (typeof destinationField === 'string') {
+      destinationSet.add(destinationField.trim());
+    } else if (Array.isArray(destinationField)) {
+      destinationField.forEach(val => destinationSet.add(val.trim()));
+    }
+  });
+
+  // 並べ替え
+  const sortedStyles = Array.from(styleMap.entries()).sort((a, b) => a[1].localeCompare(b[0], 'ja'));
+  const sortedInterests = Array.from(interestSet).sort((a, b) => a.localeCompare(b, 'ja'));
+  const sortedDestinations = Array.from(destinationSet).sort((a, b) => a.localeCompare(b, 'ja'));
+
+  // DOMへの反映
+  const addOptions = (selectId, items, isMap = false) => {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+
+    items.forEach(item => {
+      const opt = document.createElement('option');
+      if (isMap) {
+        opt.value = item[1];         // 例: "1. Tailor-made Tours"
+        opt.textContent = item[1];   // 例: "Tailor-made Tours"
+      } else {
+        opt.value = item;
+        opt.textContent = item;
+      }
+      select.appendChild(opt);
+    });
+  };
+
+  addOptions("style-select", sortedStyles, true);
+  addOptions("interest-select", sortedInterests);
+  addOptions("destination-select", sortedDestinations);
+}
+
 /**
  * Airtable APIからすべてのTourデータを取得し、allDataとfilteredDataに格納。
  * 必要に応じてフィルターUIの描画も行う。
@@ -45,13 +114,13 @@ async function fetchAndStoreData(withUI = true) {
       const res = await fetch(url);
       if (!res.ok) {
         const err = await res.text();
-        alert(`APIエラー: ${res.status}\n${err}`);
+        //alert(`APIエラー: ${res.status}\n${err}`);
         return;
       }
 
       const data = await res.json();
       if (!data.records) {
-        alert("Airtableからの形式が不正です。");
+        //alert("Airtableからの形式が不正です。");
         return;
       }
 
@@ -76,6 +145,11 @@ async function fetchAndStoreData(withUI = true) {
     allData = all;
     filteredData = [...allData];
 
+    if (window.location.pathname === '/' || window.location.pathname.endsWith('index.html')) {
+        populateSearchDropdownsFromTourData();
+        console.log('filteredData', filteredData);
+    }
+
     // UI更新が必要な場合
     if (withUI) {
       generateFilters();          
@@ -89,37 +163,36 @@ async function fetchAndStoreData(withUI = true) {
         document.querySelectorAll('input[name="style"]').forEach(input => {
           const normalizedLabel = input.value.replace(/^\d+\.\s*/, '').toLowerCase().replace(/[^a-z0-9]/g, '');
           const normalizedUrlType = urlType.toLowerCase().replace(/[^a-z0-9]/g, '');
+
           if (normalizedLabel === normalizedUrlType) {
             input.checked = true;
             typApplied = true;
           }
         });
 
-        // Interest (interest=name)
-        const urlInterest = urlParams.get('interest');
-        if (urlInterest) {
-          document.querySelectorAll('input[name="interest"]').forEach(input => {
+        function applyUrlParamToCheckboxes(paramName) {
+          const urlValue = urlParams.get(paramName);
+          if (!urlValue) return;
+
+          const normalizedUrl = urlValue.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+          document.querySelectorAll(`input[name="${paramName}"]`).forEach(input => {
             const normalizedLabel = input.value.replace(/^\d+\.\s*/, '').toLowerCase().replace(/[^a-z0-9]/g, '');
-            const normalizedUrlInterest = urlInterest.toLowerCase().replace(/[^a-z0-9]/g, '');
-            if (normalizedLabel === normalizedUrlInterest) {
+            if (normalizedLabel === normalizedUrl) {
               input.checked = true;
               typApplied = true;
             }
           });
         }
 
+        // style (style=name)
+        applyUrlParamToCheckboxes('style');
+
+        // Interest (interest=name)
+        applyUrlParamToCheckboxes('interest');
+        
         // Destination (destination=name)
-        const urlDestination = urlParams.get('destination');
-        if (urlDestination) {
-          document.querySelectorAll('input[name="destination"]').forEach(input => {
-            const normalizedLabel = input.value.replace(/^\d+\.\s*/, '').toLowerCase().replace(/[^a-z0-9]/g, '');
-            const normalizedUrlDestination = urlDestination.toLowerCase().replace(/[^a-z0-9]/g, '');
-            if (normalizedLabel === normalizedUrlDestination) {
-              input.checked = true;
-              typApplied = true;
-            }
-          });
-        }
+        applyUrlParamToCheckboxes('destination');
 
         // Month (selected-month=YYYY-MM)
         const selectedMonthFromUrl = urlParams.get('selected-month');
@@ -2010,6 +2083,7 @@ function buildPanel() {
     section.innerHTML = `<strong>${year}</strong><br>`;
     getMonthsFor(year).forEach(({ label, value, disabled }) => {
       const btn = document.createElement('button');
+      btn.type = 'button';
       btn.textContent = label;
       btn.disabled = disabled;
       btn.onclick = () => {
