@@ -145,8 +145,6 @@ async function fetchAndStoreData(withUI = true) {
     allData = all;
     filteredData = [...allData];
 
-    console.log('window.location.pathname', window.location.pathname);
-    
     if (window.location.pathname === '/' || window.location.pathname.endsWith('index.html')) {
         populateSearchDropdownsFromTourData();
         console.log('filteredData', filteredData);
@@ -404,7 +402,8 @@ function applyFilter() {
   const selectedDestinations = Array.from(document.querySelectorAll('input[name="destination"]:checked')).map(el => el.value.trim());
   const selectedMonth = document.getElementById('selected-month')?.value?.trim() || '';
 
-  console.log('selectedMonth', selectedMonth);
+  const keywordInput = document.getElementById('search-keyword');
+  const keyword = keywordInput?.value?.trim().toLowerCase() || '';
 
   // noUiSliderからTrip Length（日数）の範囲を取得
   let selectedMinDays = null;
@@ -417,13 +416,32 @@ function applyFilter() {
     selectedMaxDays = parseInt(values[1]);
   }
 
-  console.log('allData', allData);
   // 各フィルター条件を満たすレコードのみ残す
   filteredData = allData.filter(record => {
     const styleField = record.fields["Name (from Style)"] || '';
     const interestField = record.fields["Interest"] || '';
     const destinationField = record.fields["Destination"] || '';
     const days = record.fields.Days;
+
+    const name = (record.fields.Name || '').toLowerCase();
+    const tour_number = (record.fields['Tour Number'] || '').toLowerCase();
+    const interest = Array.isArray(record.fields.Interest)
+    ? record.fields.Interest.join(', ').toLowerCase()
+    : (record.fields.Interest || '').toLowerCase();
+    const destination = Array.isArray(record.fields.Destination)
+    ? record.fields.Destination.join(', ').toLowerCase()
+    : (record.fields.Destination || '').toLowerCase();
+    const accommodation = Array.isArray(record.fields['Accommodation (from Itinerary)'])
+    ? record.fields['Accommodation (from Itinerary)'].join(', ').toLowerCase()
+    : (record.fields['Accommodation (from Itinerary)'] || '').toLowerCase();
+
+    // キーワードマッチ
+    const keywordMatch = !keyword || 
+    name.includes(keyword) || 
+    tour_number.includes(keyword) || 
+    accommodation.includes(keyword) || 
+    interest.includes(keyword) || 
+    destination.includes(keyword);
 
     // Style フィルター判定
     let styleMatch = false;
@@ -490,7 +508,8 @@ function applyFilter() {
       });
     }
 
-    return styleMatch && interestMatch && destinationMatch && daysMatch && monthMatch;
+    return keywordMatch && styleMatch && interestMatch && destinationMatch && daysMatch && monthMatch;
+
 
   });
 
