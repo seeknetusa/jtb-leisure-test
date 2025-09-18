@@ -145,6 +145,8 @@ async function fetchAndStoreData(withUI = true) {
     allData = all;
     filteredData = [...allData];
 
+    console.log('window.location.pathname', window.location.pathname);
+    
     if (window.location.pathname === '/' || window.location.pathname.endsWith('index.html')) {
         populateSearchDropdownsFromTourData();
         console.log('filteredData', filteredData);
