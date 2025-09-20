@@ -509,8 +509,6 @@ function applyFilter() {
     }
 
     return keywordMatch && styleMatch && interestMatch && destinationMatch && daysMatch && monthMatch;
-
-
   });
 
   // ページをリセットし再描画
@@ -783,15 +781,33 @@ function generateSearchDropdowns() {
 const button = document.getElementById('search-button');
 if (button) {
   button.addEventListener('click', () => {
-    // 検索条件の取得
-    const keyword = document.getElementById('search-keyword').value.trim().toLowerCase();
+    // キーワードを取得して正規化
+    const keyword = document.getElementById('search-keyword')?.value.trim().toLowerCase() || '';
 
     // データのフィルタリング
     filteredData = allData.filter(record => {
       const name = (record.fields.Name || '').toLowerCase();
-    
-      // キーワード検索（Nameフィールド）
-      const keywordMatch = !keyword || name.includes(keyword);
+      const tour_number = (record.fields['Tour Number'] || '').toLowerCase();
+
+      const interest = Array.isArray(record.fields.Interest)
+        ? record.fields.Interest.join(', ').toLowerCase()
+        : (record.fields.Interest || '').toLowerCase();
+
+      const destination = Array.isArray(record.fields.Destination)
+        ? record.fields.Destination.join(', ').toLowerCase()
+        : (record.fields.Destination || '').toLowerCase();
+
+      const accommodation = Array.isArray(record.fields['Accommodation (from Itinerary)'])
+        ? record.fields['Accommodation (from Itinerary)'].join(', ').toLowerCase()
+        : (record.fields['Accommodation (from Itinerary)'] || '').toLowerCase();
+
+      // キーワードにどれかがマッチしていればOK
+      const keywordMatch = !keyword || 
+        name.includes(keyword) ||
+        tour_number.includes(keyword) ||
+        interest.includes(keyword) ||
+        destination.includes(keyword) ||
+        accommodation.includes(keyword);
 
       return keywordMatch;
     });
@@ -802,6 +818,7 @@ if (button) {
     paginateAndDisplay();
   });
 }
+
 
 // ソートセレクトボックスの変更イベント
 const sort = document.getElementById('sort-select');
