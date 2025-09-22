@@ -606,9 +606,9 @@ function generatePaginationButtons() {
         displayCurrentPage();          // 表示更新
         generatePaginationButtons();   // ボタン再生成
 
-        // ★ ページ上部にスクロール
-        const topElement = document.querySelector('.tour-list-section') || document.body;
-        topElement.scrollIntoView({ behavior: 'smooth' }); // スムーズにスクロール
+        // ページ上部にジャンプ
+        const topElement = document.querySelector('#tour-list-section');
+        topElement.scrollIntoView({ behavior: 'smooth' });
       });
     } else {
       btn.disabled = true; // "..." はクリック不可
