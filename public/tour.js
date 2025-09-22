@@ -605,6 +605,10 @@ function generatePaginationButtons() {
         currentPage = page;            // ページ更新
         displayCurrentPage();          // 表示更新
         generatePaginationButtons();   // ボタン再生成
+
+        // ★ ページ上部にスクロール
+        const topElement = document.querySelector('.tour-list-section') || document.body;
+        topElement.scrollIntoView({ behavior: 'smooth' }); // スムーズにスクロール
       });
     } else {
       btn.disabled = true; // "..." はクリック不可
