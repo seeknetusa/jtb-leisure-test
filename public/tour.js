@@ -524,6 +524,7 @@ function paginateAndDisplay() {
 
   // 総件数を画面に表示
   document.getElementById('total-count').innerHTML  = `<div id="total-count"><strong>${filteredData.length}</strong>  Tours Found`;
+  document.getElementById('total-count-mb').innerHTML  = `<div id="total-count"><strong>${filteredData.length}</strong>  Tours Found`;
 
   // ページネーションボタンを生成
   generatePaginationButtons();
@@ -2186,8 +2187,11 @@ window.initLightboxImages = function ({ selector, lightboxClass }) {
     prevCount: allImgs.length,
   };
 
+  const isMobile = window.innerWidth <= 767;
+  const limit = selector === '.hero-images' ? (isMobile ? 3 : 5) : allImgs.length;
+
   // Heroバッジ処理
-  if (selector === '.hero-images' && allImgs.length > 5) {
+  if (selector === '.hero-images' && allImgs.length > limit) {  
     const box = document.querySelector(selector);
     let overlay = box.querySelector('.badge-overlay');
     if (!overlay) {
@@ -2198,7 +2202,7 @@ window.initLightboxImages = function ({ selector, lightboxClass }) {
       overlay.appendChild(badge);
       box.appendChild(overlay);
     }
-    overlay.querySelector('.more-badge').textContent = `+${allImgs.length - 5} photos`;
+    overlay.querySelector('.more-badge').textContent = `+${allImgs.length - limit} photos`;
   }
 
   // ライトボックス DOM
@@ -2236,8 +2240,6 @@ window.initLightboxImages = function ({ selector, lightboxClass }) {
     lbImg.src = allImgs[current].src;
     lbImg.alt = allImgs[current].alt || '';
   }
-
-  const limit = selector === '.hero-images' ? 5 : allImgs.length;
 
   allImgs.slice(0, limit).forEach((imgEl, i) => {
     imgEl.style.cursor = 'zoom-in';
