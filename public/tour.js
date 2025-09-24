@@ -164,6 +164,7 @@ async function fetchAndStoreData(withUI = true) {
           const normalizedLabel = input.value.replace(/^\d+\.\s*/, '').toLowerCase().replace(/[^a-z0-9]/g, '');
           const normalizedUrlType = urlType.toLowerCase().replace(/[^a-z0-9]/g, '');
 
+          console.log('normalizedLabel', normalizedLabel);
           console.log('normalizedUrlType', normalizedUrlType);
 
           if (normalizedLabel === normalizedUrlType) {
@@ -187,6 +188,8 @@ async function fetchAndStoreData(withUI = true) {
           });
         }
 
+        return;
+        
         // style (style=name)
         applyUrlParamToCheckboxes('style');
 
