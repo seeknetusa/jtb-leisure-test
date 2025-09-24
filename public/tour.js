@@ -1459,12 +1459,12 @@ async function renderTourDetail(recordId) {
       const recordId = Tour?.records?.[0]?.id;
       if (recordId) {
         switch (fields['ID (from Style)'][0]) {
-          case 3:
-          case 5:
+          case 3: //Tailor-made Tours
+          case 5: //Luxury Private Tours
             window.location.href = `./custom-tour-inquiry-form?tid=${encodeURIComponent(recordId)}`;
             break;
-          default:
-            window.location.href = `./contact?tid=${encodeURIComponent(recordId)}`;
+          default: //Day Tours, Escorted Tours, Package Tours
+            window.location.href = `./tour-inquiry-form?tid=${encodeURIComponent(recordId)}`;
         }
         
       }
