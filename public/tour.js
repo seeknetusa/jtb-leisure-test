@@ -2052,7 +2052,10 @@ function waitImagesLoaded(scope) {
 
 
 // Inquiryページへの初期値セット
-if (window.location.pathname.includes('/custom-tour-inquiry-form')) {
+if (
+  window.location.pathname.includes('/custom-tour-inquiry-form') ||
+  window.location.pathname.includes('/tour-inquiry-form')
+) {
   (async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const tid = urlParams.get('tid');
