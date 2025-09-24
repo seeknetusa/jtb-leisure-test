@@ -147,7 +147,7 @@ async function fetchAndStoreData(withUI = true) {
 
     if (window.location.pathname === '/' || window.location.pathname.endsWith('index.html')) {
         populateSearchDropdownsFromTourData();
-        console.log('filteredData', filteredData);
+        //console.log('filteredData', filteredData);
     }
 
     // UI更新が必要な場合
@@ -909,7 +909,7 @@ function createTourCardElement(record, logoMap) {
   const template = document.getElementById('tour-card-template');
   const clone = template.content.cloneNode(true); // テンプレートを複製
 
-  console.log('f', f); // デバッグ用：レコード内容を確認
+  //console.log('f', f); // デバッグ用：レコード内容を確認
 
   const newLabel = clone.querySelector(".new-label");
   if (newLabel) {
@@ -1106,10 +1106,8 @@ async function fetchRecommendedTours(containerId) {
     if (recordId) {
       const Tour = await fetchTour(recordId);
       //encodedDestinations = extractUniqueDestinations(Tour.records);
-      console.log('Tour', Tour);
       //console.log('records', Tour.records[0]);
       styleId = Tour.records[0].fields['ID (from Style)'][0];
-      console.log('styleId', styleId);
     }
 
     // destinationクエリパラメータがある場合はそれを利用
@@ -1291,10 +1289,28 @@ async function renderTourDetail(recordId) {
   // recordIdがある場合、該当ツアーからDestination情報を抽出
   if (recordId) {
     const Tour = await fetchTour(recordId);
-    console.log('Tour', Tour);
+    //console.log('Tour', Tour);
     
     const fields = Tour?.records?.[0]?.fields;
     if (!fields) {
+      window.location.href = "/404notfound";
+      return;
+    }
+
+    // Display Date 制御
+    const today = normalizeDateOnly(getTodayInLA()); 
+
+    const start = fields["Display Start Date"];
+    const end = fields["Display End Date"];
+  
+    const startDate = start ? normalizeDateOnly(start) : null;
+    const endDate = end ? normalizeDateOnly(end) : null;
+     
+    const isVisible =
+      (!startDate || today >= startDate) &&
+      (!endDate || today <= endDate);
+
+    if (!isVisible) {
       window.location.href = "/404notfound";
       return;
     }
@@ -1453,8 +1469,6 @@ async function renderTourDetail(recordId) {
         
       }
     });
-
-    console.log('fields.Inquiry', fields.Inquiry);
 
     if (Array.isArray(inquiryIds) && inquiryIds.length > 0) {
       await renderInquiryDetails(inquiryIds);
@@ -1838,7 +1852,6 @@ async function fetchFeaturesBlocks(featureIds) {
 
   do {
     const url = `${apiBaseUrl}?table=7&filterField=RECORD_ID()&filterValue=${idParam}` + (offset ? `&offset=${offset}` : "");
-    console.log('url', url);
 
     const res = await fetch(url);
     if (!res.ok) {
@@ -1982,7 +1995,6 @@ async function renderTourFeatures(featureIds) {
 
     // <strong> タイトル差し込み
     const strong = node.querySelector("strong");
-    console.log('strong', strong)
     if (strong) strong.textContent = title;
 
     // <p> 差し替え（複数行対応）
@@ -2051,7 +2063,7 @@ if (window.location.pathname.includes('/custom-tour-inquiry-form')) {
       const tours = await fetchTour(tid); // tours は配列
 
       if (!Array.isArray(tours.records) || tours.records.length === 0) {
-        console.warn('Tour データがありません');
+        //console.warn('Tour データがありません');
         return;
       }
 
