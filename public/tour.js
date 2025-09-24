@@ -523,8 +523,8 @@ function paginateAndDisplay() {
   totalPages = Math.ceil(filteredData.length / pageSize);
 
   // 総件数を画面に表示
-  document.getElementById('total-count').innerHTML  = `<div id="total-count"><strong>${filteredData.length}</strong>  Tours Found`;
-  document.getElementById('total-count-mb').innerHTML  = `<div id="total-count"><strong>${filteredData.length}</strong>  Tours Found`;
+  document.getElementById('total-count').innerHTML  = `<strong>${filteredData.length}</strong>  Tours Found`;
+  document.getElementById('total-count-mb').innerHTML  = `<strong>${filteredData.length}</strong>  Tours`;
 
   // ページネーションボタンを生成
   generatePaginationButtons();
@@ -2202,6 +2202,7 @@ window.initLightboxImages = function ({ selector, lightboxClass }) {
       overlay.appendChild(badge);
       box.appendChild(overlay);
     }
+
     overlay.querySelector('.more-badge').textContent = `+${allImgs.length - limit} photos`;
   }
 
