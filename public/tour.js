@@ -896,6 +896,30 @@ if (clear) {
   });
 }
 
+// トップページフィルタークリア
+const clearTop = document.getElementById('clear-filters-top');
+if (clearTop) {
+  clearTop.addEventListener('click', (e) => {
+    e.preventDefault();
+
+    // すべてのセレクトボックスをリセット
+    document.querySelectorAll('#tour-search-form select').forEach(select => {
+      select.selectedIndex = 0;
+    });
+
+    // 月フィールドとキーワード入力をクリア
+    const monthInput = document.getElementById('selected-month');
+    if (monthInput) monthInput.value = '';
+
+    const keywordInput = document.getElementById('keyword');
+    if (keywordInput) keywordInput.value = '';
+
+    // カスタムUIの月パネルなどがあれば非表示に戻す
+    const panel = document.getElementById('month-picker-panel');
+    if (panel) panel.style.display = 'none';
+  });
+}
+
 /**
  * Airtableから取得したレコードとスタイル別ロゴのマップをもとに、
  * ツアーカードのDOM要素を生成して返す関数。
