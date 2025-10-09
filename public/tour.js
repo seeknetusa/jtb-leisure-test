@@ -64,7 +64,7 @@ function populateSearchDropdownsFromTourData() {
   });
 
   // 並べ替え
-  const sortedStyles = Array.from(styleMap.entries()).sort((a, b) => a[1].localeCompare(b[0], 'ja'));
+  const sortedStyles = Array.from(styleMap.entries()).sort((a, b) => a[0].localeCompare(b[0], 'ja'));
   const sortedInterests = Array.from(interestSet).sort((a, b) => a.localeCompare(b, 'ja'));
   const sortedDestinations = Array.from(destinationSet).sort((a, b) => a.localeCompare(b, 'ja'));
 
@@ -145,7 +145,7 @@ async function fetchAndStoreData(withUI = true) {
     allData = all;
     filteredData = [...allData];
 
-    if (window.location.pathname === '/' || window.location.pathname.endsWith('index.html')) {
+    if (window.location.pathname === '/' || window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('top.html')) {
         populateSearchDropdownsFromTourData();
         //console.log('filteredData', filteredData);
     }
@@ -1035,6 +1035,21 @@ function createTourCardElement(record, logoMap) {
       <span class="red"><img src="${redIcon}" alt=""></span>
       <span class="white"><img src="${whiteIcon}" alt=""></span>
     `;
+
+    const linkImg = clone.querySelector('img.tour-image');
+    if (linkImg) {
+      const wrapper = document.createElement('a');
+      wrapper.className = 'tour-image-link';
+      wrapper.href = href;
+
+      if (isExternal) {
+        wrapper.target = '_blank';
+        wrapper.rel = 'noopener noreferrer';
+      }
+
+      linkImg.replaceWith(wrapper);
+      wrapper.appendChild(linkImg);
+    }
   }
 
   return clone; // 完成したDOMノードを返す
