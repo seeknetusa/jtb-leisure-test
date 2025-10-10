@@ -1779,7 +1779,7 @@ async function renderTourItinerary(itineraryIds = [], tableNumber = 2) {
     // 見出し
     const h3 = node.querySelector(".day-content h3");
     if (h3) {
-      h3.textContent = `DAY: ${dayNum}${title ? ` ${title}` : ""}`;
+      h3.textContent = `DAY ${dayNum}${title ? `: ${title}` : ""}`;
     }
 
     // 詳細
