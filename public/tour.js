@@ -1354,10 +1354,38 @@ async function renderTourDetail(recordId) {
       return;
     }
 
+    /*
     if (fields?.Interest?.length) {
       const keywordsEl = document.querySelector(".tour-tags .keywords");
       if (keywordsEl) {
         keywordsEl.textContent = fields.Interest.join(" | ");
+      }
+    }
+    */
+
+    if (fields?.Interest?.length && fields["Name (from Style)"]?.[0]) {
+      const keywordsEl = document.querySelector(".tour-tags .keywords");
+      if (keywordsEl) {
+        const styleName = fields["Name (from Style)"][0];
+
+        // スタイル名とリンク先のマッピング
+        const styleSlugMap = {
+          "1. Tailor-made Tours": "/tailor-made-tours",
+          "2. Escorted Tours": "/escorted-tours",
+          "3. Luxury Private Tours": "/luxury-private-tours",
+          "4. Package Tours": "/package-tours",
+          "5. Day Tours": "/day-tours",
+        };
+
+        const baseUrl = styleSlugMap[styleName] || "#";
+
+        // HTML生成
+        const linksHtml = fields.Interest.map(keyword => {
+          const encodedKeyword = encodeURIComponent(keyword.trim());
+          return `<a href="${baseUrl}?interest=${encodedKeyword}">${keyword}</a>`;
+        }).join(" | ");
+
+        keywordsEl.innerHTML = linksHtml;
       }
     }
 
