@@ -1382,7 +1382,7 @@ async function renderTourDetail(recordId) {
         // HTML生成
         const linksHtml = fields.Interest.map(keyword => {
           const encodedKeyword = encodeURIComponent(keyword.trim());
-          return `<a href="${baseUrl}?interest=${encodedKeyword}">${keyword}</a>`;
+          return `<a href="${baseUrl}?interest=${encodedKeyword}#tour-list-section">${keyword}</a>`;
         }).join(" | ");
 
         keywordsEl.innerHTML = linksHtml;
