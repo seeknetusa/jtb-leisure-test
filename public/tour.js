@@ -57,9 +57,15 @@ function populateSearchDropdownsFromTourData() {
 
     // Destination
     if (typeof destinationField === 'string') {
-      destinationSet.add(destinationField.trim());
+      const trimmed = destinationField.trim();
+      const label = trimmed.replace(/^\d+\.\s*/, ''); // 例: "3. Tokyo" → "Tokyo"
+      destinationSet.add(label);
     } else if (Array.isArray(destinationField)) {
-      destinationField.forEach(val => destinationSet.add(val.trim()));
+      destinationField.forEach(val => {
+        const trimmed = val.trim();
+        const label = trimmed.replace(/^\d+\.\s*/, '');
+        destinationSet.add(label);
+      });
     }
   });
 
