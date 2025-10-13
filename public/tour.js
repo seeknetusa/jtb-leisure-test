@@ -37,14 +37,12 @@ function populateSearchDropdownsFromTourData() {
     if (Array.isArray(styleField)) {
       styleField.forEach(s => {
         const trimmed = s.trim();
-        const label = trimmed.replace(/^\d+\.\s*/, ''); // remove leading number and dot
-        styleMap.set(trimmed, label);
+        styleMap.set(trimmed, trimmed); // 一旦そのまま保持
       });
     } else if (typeof styleField === 'string') {
       styleField.split(',').forEach(s => {
         const trimmed = s.trim();
-        const label = trimmed.replace(/^\d+\.\s*/, '');
-        styleMap.set(trimmed, label);
+        styleMap.set(trimmed, trimmed);
       });
     }
 
@@ -57,22 +55,26 @@ function populateSearchDropdownsFromTourData() {
 
     // Destination
     if (typeof destinationField === 'string') {
-      const trimmed = destinationField.trim();
-      const label = trimmed.replace(/^\d+\.\s*/, ''); // 例: "3. Tokyo" → "Tokyo"
-      destinationSet.add(label);
+      destinationSet.add(destinationField.trim());
     } else if (Array.isArray(destinationField)) {
-      destinationField.forEach(val => {
-        const trimmed = val.trim();
-        const label = trimmed.replace(/^\d+\.\s*/, '');
-        destinationSet.add(label);
-      });
+      destinationField.forEach(val => destinationSet.add(val.trim()));
     }
   });
 
-  // 並べ替え
-  const sortedStyles = Array.from(styleMap.entries()).sort((a, b) => a[0].localeCompare(b[0], 'ja'));
+  // 並べ替え（まず元の文字列順で並べる）
+  const sortedStyles = Array.from(styleMap.keys())
+  .sort((a, b) => a.localeCompare(b, 'ja'))
+  .map(key => {
+    // 並び替え後に番号を削除
+    const label = key.replace(/^\d+\.\s*/, '');
+    return [key, label];
+  });
+
   const sortedInterests = Array.from(interestSet).sort((a, b) => a.localeCompare(b, 'ja'));
-  const sortedDestinations = Array.from(destinationSet).sort((a, b) => a.localeCompare(b, 'ja'));
+
+  const sortedDestinations = Array.from(destinationSet)
+    .sort((a, b) => a.localeCompare(b, 'ja'))
+    .map(label => label.replace(/^\d+\.\s*/, '')); // 並び替え後に整形
 
   // DOMへの反映
   const addOptions = (selectId, items, isMap = false) => {
