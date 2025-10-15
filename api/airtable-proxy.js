@@ -70,17 +70,17 @@ export default async function handler(req, res) {
     formulas.push(`{Publish}=TRUE()`);
   }
 
-  console.log('tableName2', tableName);
-  console.log('filterField2', filterField);
-  console.log('filterValue2', filterValue);
+  //console.log('tableName2', tableName);
+  //console.log('filterField2', filterField);
+  //console.log('filterValue2', filterValue);
 
   // filterField 1
   if (filterField && filterValue !== undefined) {
     const values = decodeURIComponent(filterValue).split(',').map(v => v.trim());
 
-    console.log('tableName', tableName);
-    console.log('values', values);
-    console.log('filterValue', filterValue);
+    //console.log('tableName', tableName);
+    //console.log('values', values);
+    //console.log('filterValue', filterValue);
 
     if (filterField === 'RECORD_ID()') {
       if (values.length > 1) {
@@ -151,7 +151,7 @@ export default async function handler(req, res) {
   // ページネーションの offset がある場合
   if (offset) url += `&offset=${offset}`;
   
-  console.log('url', url);
+  //console.log('url', url);
 
   try {
     const airtableRes = await fetch(url, {
@@ -164,7 +164,7 @@ export default async function handler(req, res) {
     }
 
     const data = await airtableRes.json();
-    console.log('data', data);
+    //console.log('data', data);
 
     return res.status(200).json(data);
 
