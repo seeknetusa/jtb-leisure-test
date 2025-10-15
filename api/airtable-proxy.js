@@ -1,9 +1,17 @@
 export default async function handler(req, res) {
-  // CORS 対応（Webflowドメインからのアクセス許可）
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  //res.setHeader('Access-Control-Allow-Origin', 'https://leisure.jtbusa.com');
+  // 許可するオリジン一覧
+  const allowedOrigins = [
+    'https://leisure.jtbusa.com',
+    'http://jtbtour.com',
+  ];
+
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+
+  // プリフライト (OPTIONS) 対応
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-  //res.setHeader('Access-Control-Allow-Methods', 'GET');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   // プリフライトリクエスト対策（OPTIONSリクエストへの応答）
