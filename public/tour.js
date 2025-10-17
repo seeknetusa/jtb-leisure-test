@@ -1534,12 +1534,23 @@ async function renderTourDetail(recordId) {
       const recordId = Tour?.records?.[0]?.id;
       if (recordId) {
         switch (fields['ID (from Style)'][0]) {
-          case 3: //Tailor-made Tours
-          case 5: //Luxury Private Tours
-            window.location.href = `./custom-tour-inquiry-form?tid=${encodeURIComponent(recordId)}`;
+          case 1: //Day Tours
+            window.location.href = `./day-tours-inquiry?tid=${encodeURIComponent(recordId)}`;
             break;
-          default: //Day Tours, Escorted Tours, Package Tours
-            window.location.href = `./tour-inquiry-form?tid=${encodeURIComponent(recordId)}`;
+          case 2: //Escorted Tours
+            window.location.href = `./escorted-tours-inquiry?tid=${encodeURIComponent(recordId)}`;
+            break;
+          case 3: //Tailor-made Tours
+            window.location.href = `./tailor-made-tours-inquiry?tid=${encodeURIComponent(recordId)}`;
+            break;
+          case 4: //Package Tours
+            window.location.href = `./package-tours-inquiry?tid=${encodeURIComponent(recordId)}`;
+            break;
+          case 5: //Luxury Private Tours
+            window.location.href = `./luxury-private-tours-inquiry?tid=${encodeURIComponent(recordId)}`;
+            break;
+          default:
+            window.location.href = `./inquiry-form?tid=${encodeURIComponent(recordId)}`;
         }
         
       }
