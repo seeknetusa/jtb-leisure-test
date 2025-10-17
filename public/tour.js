@@ -1537,14 +1537,14 @@ async function renderTourDetail(recordId) {
           case 1: //Day Tours
             window.location.href = `./day-tours-inquiry?tid=${encodeURIComponent(recordId)}`;
             break;
-          case 2: //Escorted Tours
-            window.location.href = `./escorted-tours-inquiry?tid=${encodeURIComponent(recordId)}`;
+          case 2: //Package Tours
+            window.location.href = `./package-tours-inquiry?tid=${encodeURIComponent(recordId)}`;
             break;
           case 3: //Tailor-made Tours
             window.location.href = `./tailor-made-tours-inquiry?tid=${encodeURIComponent(recordId)}`;
             break;
-          case 4: //Package Tours
-            window.location.href = `./package-tours-inquiry?tid=${encodeURIComponent(recordId)}`;
+          case 4: //Escorted Tours
+            window.location.href = `./escorted-tours-inquiry?tid=${encodeURIComponent(recordId)}`;
             break;
           case 5: //Luxury Private Tours
             window.location.href = `./luxury-private-tours-inquiry?tid=${encodeURIComponent(recordId)}`;
