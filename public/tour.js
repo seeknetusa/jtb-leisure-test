@@ -2139,8 +2139,12 @@ function waitImagesLoaded(scope) {
 
 // Inquiryページへの初期値セット
 if (
-  window.location.pathname.includes('/custom-tour-inquiry-form') ||
-  window.location.pathname.includes('/tour-inquiry-form')
+  window.location.pathname.includes('/inquiry-form') ||
+  window.location.pathname.includes('/tailor-made-tours-inquiry') ||
+  window.location.pathname.includes('/escorted-tours-inquiry') ||
+  window.location.pathname.includes('/luxury-private-tours-inquiry') ||
+  window.location.pathname.includes('/package-tours-inquiry') ||
+  window.location.pathname.includes('/day-tours-inquiry')
 ) {
   (async () => {
     const urlParams = new URLSearchParams(window.location.search);
