@@ -2164,12 +2164,12 @@ if (
       const tourName = tours.records[0]?.fields?.Name || '';
       const tourNumber = tours.records[0]?.fields?.['Tour Number'] || '';
 
-      const name = document.querySelector('#form-tour-name');
+      const name = document.querySelector('#Tour-Name');
       if (name) {
         name.value = tourName;
       }
 
-      const tourcode = document.querySelector('#form-tour-code');
+      const tourcode = document.querySelector('#Tour-Code');
       if (tourcode) {
         tourcode.value = tourNumber;
       }
