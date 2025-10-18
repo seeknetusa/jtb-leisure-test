@@ -2154,7 +2154,7 @@ if (
 
     try {
       const tours = await fetchTour(tid); // tours は配列
-      console.log('tours', tours);
+      //console.log('tours', tours);
 
       if (!Array.isArray(tours.records) || tours.records.length === 0) {
         //console.warn('Tour データがありません');
