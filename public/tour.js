@@ -1832,7 +1832,14 @@ async function renderTourItinerary(itineraryIds = [], tableNumber = 2) {
     // 詳細
     const descP = node.querySelector(".day-content p");
     if (descP) {
-      descP.innerHTML = String(detail).replace(/\r?\n/g, "<br>");
+      let formattedDetail = String(detail)
+        .replace(/\r?\n/g, "<br>") // 改行を <br> に変換
+        .replace(
+          /(https?:\/\/[^\s<]+)/g, // URL検出（http / https）
+          '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
+        );
+
+      descP.innerHTML = formattedDetail;
     }
 
     // 画像

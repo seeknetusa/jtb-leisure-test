@@ -148,6 +148,12 @@ export default async function handler(req, res) {
     url += `&sort[0][field]=${encodeURIComponent(sortField)}&sort[0][direction]=${encodeURIComponent(sortDirection)}`;
   }
   
+  // 第2ソート条件
+  //const secondarySortField = 'Name';
+  //const secondarySortDirection = 'asc'; 
+  //url += `&sort[1][field]=${encodeURIComponent(secondarySortField)}&sort[1][direction]=${encodeURIComponent(secondarySortDirection)}`;
+
+
   // ページネーションの offset がある場合
   if (offset) url += `&offset=${offset}`;
   
