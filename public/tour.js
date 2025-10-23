@@ -1834,6 +1834,7 @@ async function renderTourItinerary(itineraryIds = [], tableNumber = 2) {
     if (descP) {
       let formattedDetail = String(detail)
         .replace(/\r?\n/g, "<br>") // 改行を <br> に変換
+        .replace(/\\\*/g, "*")
         .replace(
           /(https?:\/\/[^\s<]+)/g, // URL検出（http / https）
           '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
