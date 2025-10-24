@@ -1763,7 +1763,12 @@ async function renderFeatureAndRemarks(fields, remarksTableNumber = 2) {
 
     const li = document.createElement('li');
     // 改行を可視化（不要なら textContent に）
-    li.innerHTML = text.replace(/\r?\n/g, "<br>");
+    li.innerHTML = text.replace(/\r?\n/g, "<br>")
+    .replace(
+          /(https?:\/\/[^\s<]+)/g, // URL検出（http / https）
+          '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
+        );
+    
     ol.appendChild(li);
   });
 
@@ -2144,7 +2149,6 @@ function waitImagesLoaded(scope) {
   return Promise.all(jobs);
 }
 
-
 // Inquiryページへの初期値セット
 if (
   window.location.pathname.includes('/inquiry-form') ||
@@ -2152,7 +2156,8 @@ if (
   window.location.pathname.includes('/escorted-tours-inquiry') ||
   window.location.pathname.includes('/luxury-private-tours-inquiry') ||
   window.location.pathname.includes('/package-tours-inquiry') ||
-  window.location.pathname.includes('/day-tours-inquiry')
+  window.location.pathname.includes('/day-tours-inquiry') ||
+  window.location.pathname.includes('/contact.html')
 ) {
   (async () => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -2171,6 +2176,19 @@ if (
 
       const tourName = tours.records[0]?.fields?.Name || '';
       const tourNumber = tours.records[0]?.fields?.['Tour Number'] || '';
+      const departureCity = tours.records[0]?.fields?.['Departure City'] || '';
+      const days = tours.records[0]?.fields?.Days || '';
+      const tourStartDate = tours.records[0]?.fields?.['Tour Date (from Inquiry)'][0] || '';
+
+      const [date, text] = tourStartDate.split(":").map(s => s.trim());
+
+      let tourDate;
+      if (!text) {
+        const [startDate] = date.split(" - ").map(s => s.trim());
+        tourDate = startDate;
+      } else {
+        tourDate = date;
+      }
 
       const name = document.querySelector('#Tour-Name');
       if (name) {
@@ -2181,6 +2199,24 @@ if (
       if (tourcode) {
         tourcode.value = tourNumber;
       }
+
+      const departure = document.querySelector('#Departure-City');
+      if (departure) {
+        departure.value = departureCity;
+      }
+
+      const length = document.querySelector('#Length-of-stay');
+      if (length) {
+        length.value = days;
+      }
+
+      if(tourDate){
+        const date = document.querySelector('#Departure-Date');
+        if (date) {
+          date.value = tourDate;
+        }
+      }
+
     } catch (err) {
       console.error('Tour取得エラー:', err);
     }
